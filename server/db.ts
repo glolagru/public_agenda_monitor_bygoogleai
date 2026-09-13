@@ -472,6 +472,36 @@ class DatabaseService {
     return { event, review: newReview };
   }
 
+  public updateEventScore(
+    eventId: string,
+    score: number
+  ): { event: NormalizedEvent; review: ReviewEntry } {
+    const event = this.state.events.find((e) => e.id === eventId);
+    if (!event) throw new Error(`Event mit ID ${eventId} nicht gefunden`);
+
+    const validScore = Math.min(5, Math.max(1, Math.round(score)));
+    event.editorialScore = validScore;
+
+    const reviewId = `rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const note = `Relevanz angepasst auf ${validScore}`;
+    const newReview: ReviewEntry = {
+      id: reviewId,
+      eventId,
+      decision: 'updated',
+      editorialScore: validScore,
+      comment: note,
+      createdAt: new Date().toISOString(),
+    };
+
+    this.state.reviews.push(newReview);
+    event.latestComment = note;
+    event.reviewCount = (event.reviewCount || 0) + 1;
+    this.state.lastSpecialistReviewAt = new Date().toISOString();
+
+    this.saveState();
+    return { event, review: newReview };
+  }
+
   public deleteEvent(eventId: string): NormalizedEvent {
     const event = this.state.events.find((e) => e.id === eventId);
     if (!event) throw new Error(`Event mit ID ${eventId} nicht gefunden`);

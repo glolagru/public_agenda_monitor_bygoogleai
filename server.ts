@@ -108,6 +108,20 @@ app.post('/api/events/:id/restore', (req, res) => {
   }
 });
 
+// Update event relevance score directly
+app.post('/api/events/:id/score', (req, res) => {
+  try {
+    const score = Number(req.body.score);
+    if (isNaN(score) || score < 1 || score > 5) {
+      return res.status(400).json({ error: 'Relevanz muss eine Zahl zwischen 1 und 5 sein' });
+    }
+    const result = db.updateEventScore(req.params.id, score);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Trigger retrieval
 app.post('/api/retrieval', async (req, res) => {
   try {

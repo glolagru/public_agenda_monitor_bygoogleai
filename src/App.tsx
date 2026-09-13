@@ -183,6 +183,27 @@ export function App() {
     }
   };
 
+  const handleUpdateScore = async (eventId: string, score: number) => {
+    // Optimistic local state update
+    setEvents((prev) =>
+      prev.map((e) => (e.id === eventId ? { ...e, editorialScore: score } : e))
+    );
+
+    try {
+      const res = await fetch(`/api/events/${eventId}/score`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ score }),
+      });
+      if (!res.ok) throw new Error('Fehler beim Aktualisieren der Relevanz');
+      showToast(`Relevanz auf Stufe ${score} gesetzt.`);
+      await loadData();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+      await loadData(); // rollback on error
+    }
+  };
+
   const handleReorder = async (orderedIds: string[]) => {
     // Optimistic local update
     const idMap = new Map(orderedIds.map((id, index) => [id, index + 1]));
@@ -255,6 +276,7 @@ export function App() {
                 onOpenReviewModal={(ev) => setReviewModalEvent(ev)}
                 onReorder={handleReorder}
                 onUpdateSourceUrl={handleUpdateSourceUrl}
+                onUpdateScore={handleUpdateScore}
               />
             </div>
           ) : (
