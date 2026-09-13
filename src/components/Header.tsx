@@ -71,19 +71,6 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Test Reset Button */}
-        <button
-          type="button"
-          id="test-reset-btn"
-          onClick={onTestReset}
-          disabled={isResetting}
-          title="Alle Kennzeichnungen der Datensätze zurücksetzen (wie frischer Appstart)"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[#D6E1E5] bg-white hover:bg-[#F4F7F8] text-[#1F6075] hover:text-[#164C5C] active:scale-[0.98] transition-all disabled:opacity-50 shadow-2xs cursor-pointer"
-        >
-          <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? 'animate-spin' : ''}`} />
-          <span>{isResetting ? 'Wird zurückgesetzt...' : 'Test Reset'}</span>
-        </button>
-
         {/* Action button */}
         {activeRole === 'specialist' && (
           <div className="flex items-center gap-2">
@@ -108,6 +95,19 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         )}
+
+        {/* Test Reset Button (placed all the way to the right) */}
+        <button
+          type="button"
+          id="test-reset-btn"
+          onClick={onTestReset}
+          disabled={isResetting}
+          title="Alle Kennzeichnungen der Datensätze zurücksetzen (wie frischer Appstart)"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[#D6E1E5] bg-white hover:bg-[#F4F7F8] text-[#1F6075] hover:text-[#164C5C] active:scale-[0.98] transition-all disabled:opacity-50 shadow-2xs cursor-pointer"
+        >
+          <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? 'animate-spin' : ''}`} />
+          <span>{isResetting ? 'Wird zurückgesetzt...' : 'Test Reset'}</span>
+        </button>
       </div>
     </header>
   );
