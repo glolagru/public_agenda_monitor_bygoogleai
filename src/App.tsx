@@ -105,6 +105,32 @@ export function App() {
     }
   };
 
+  const handleDelete = async (event: NormalizedEvent) => {
+    try {
+      const res = await fetch(`/api/events/${event.id}/delete`, {
+        method: 'POST',
+      });
+      if (!res.ok) throw new Error('Fehler beim Löschen');
+      showToast(`„${event.title.slice(0, 35)}...“ gelöscht (im Filter „Gelöscht“ auffindbar).`);
+      await loadData();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  const handleRestore = async (event: NormalizedEvent) => {
+    try {
+      const res = await fetch(`/api/events/${event.id}/restore`, {
+        method: 'POST',
+      });
+      if (!res.ok) throw new Error('Fehler beim Wiederherstellen');
+      showToast(`„${event.title.slice(0, 35)}...“ wiederhergestellt.`);
+      await loadData();
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
   const handleSubmitReview = async (
     eventId: string,
     decision: 'approved' | 'rejected' | 'updated' | 'deferred',
@@ -190,8 +216,10 @@ export function App() {
     }
   };
 
-  // Filter approved events for Redaktion view
-  const approvedAgendaEvents = events.filter((e) => e.editorialState === 'approved');
+  // Filter approved events for Redaktion view (excluding deleted events)
+  const approvedAgendaEvents = events.filter(
+    (e) => e.editorialState === 'approved' && !e.isDeleted
+  );
 
   return (
     <div className="min-h-screen bg-[#F4F7F8] py-2 sm:py-4 px-2 sm:px-4 lg:px-6 font-sans antialiased selection:bg-[#DCECF0] selection:text-[#182B33]">
@@ -222,6 +250,8 @@ export function App() {
                 events={events}
                 onApprove={handleApprove}
                 onReject={handleReject}
+                onDelete={handleDelete}
+                onRestore={handleRestore}
                 onOpenReviewModal={(ev) => setReviewModalEvent(ev)}
                 onReorder={handleReorder}
                 onUpdateSourceUrl={handleUpdateSourceUrl}

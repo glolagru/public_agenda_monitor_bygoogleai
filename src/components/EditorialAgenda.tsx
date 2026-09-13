@@ -23,8 +23,11 @@ export const EditorialAgenda: React.FC<EditorialAgendaProps> = ({ events }) => {
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Group events by date
-  const grouped = events.reduce((acc, ev) => {
+  // Group events by date (excluding any deleted events)
+  const activeEvents = events.filter(
+    (ev) => ev.editorialState !== 'deleted' && !ev.isDeleted
+  );
+  const grouped = activeEvents.reduce((acc, ev) => {
     const d = ev.sourceDate || 'Ohne Datum';
     if (!acc[d]) acc[d] = [];
     acc[d].push(ev);

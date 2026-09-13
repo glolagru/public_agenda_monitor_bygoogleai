@@ -7,7 +7,7 @@ export type EventType =
   | 'outlook'
   | 'decision';
 
-export type EditorialState = 'candidate' | 'approved' | 'rejected';
+export type EditorialState = 'candidate' | 'approved' | 'rejected' | 'deleted';
 
 export type SourceKey =
   | 'bverwg'
@@ -60,6 +60,7 @@ export interface NormalizedEvent {
   lastSeenAt: string;
   notSeenInLatestRetrieval: boolean;
   isNew: boolean;
+  isDeleted?: boolean;
   reviewCount: number;
   latestComment: string | null;
   reviews?: ReviewEntry[];
@@ -68,7 +69,7 @@ export interface NormalizedEvent {
 export interface ReviewEntry {
   id: string;
   eventId: string;
-  decision: 'approved' | 'rejected' | 'updated' | 'deferred';
+  decision: 'approved' | 'rejected' | 'updated' | 'deferred' | 'deleted';
   editorialScore: number | null;
   comment: string | null;
   createdAt: string;

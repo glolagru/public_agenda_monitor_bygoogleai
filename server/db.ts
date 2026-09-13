@@ -182,7 +182,12 @@ class DatabaseService {
     const { minDate, maxDate } = getDateWindow();
     return this.state.sources.map((s) => {
       const count = this.state.events.filter(
-        (e) => e.sourceKey === s.key && e.sourceDate >= minDate && e.sourceDate <= maxDate
+        (e) =>
+          e.sourceKey === s.key &&
+          e.sourceDate >= minDate &&
+          e.sourceDate <= maxDate &&
+          e.editorialState !== 'deleted' &&
+          !e.isDeleted
       ).length;
       return { ...s, eventsCount: count };
     });
@@ -465,6 +470,44 @@ class DatabaseService {
 
     this.saveState();
     return { event, review: newReview };
+  }
+
+  public deleteEvent(eventId: string): NormalizedEvent {
+    const event = this.state.events.find((e) => e.id === eventId);
+    if (!event) throw new Error(`Event mit ID ${eventId} nicht gefunden`);
+    event.editorialState = 'deleted';
+    event.isDeleted = true;
+
+    const reviewId = `rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    this.state.reviews.push({
+      id: reviewId,
+      eventId,
+      decision: 'deleted',
+      editorialScore: event.editorialScore,
+      comment: 'Ereignis gelöscht (in den Papierkorb verschoben)',
+      createdAt: new Date().toISOString(),
+    });
+    this.saveState();
+    return event;
+  }
+
+  public restoreEvent(eventId: string): NormalizedEvent {
+    const event = this.state.events.find((e) => e.id === eventId);
+    if (!event) throw new Error(`Event mit ID ${eventId} nicht gefunden`);
+    event.editorialState = 'candidate';
+    event.isDeleted = false;
+
+    const reviewId = `rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    this.state.reviews.push({
+      id: reviewId,
+      eventId,
+      decision: 'updated',
+      editorialScore: event.editorialScore,
+      comment: 'Ereignis wiederhergestellt',
+      createdAt: new Date().toISOString(),
+    });
+    this.saveState();
+    return event;
   }
 
   public updateManualPriority(orderedIds: string[]) {

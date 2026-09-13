@@ -67,7 +67,9 @@ app.get('/api/events/:id', (req, res) => {
 app.get('/api/agenda', (req, res) => {
   try {
     const allEvents = db.getEvents();
-    const approved = allEvents.filter((e) => e.editorialState === 'approved');
+    const approved = allEvents.filter(
+      (e) => e.editorialState === 'approved' && !e.isDeleted
+    );
     const { minDate, maxDate } = getDateWindow();
 
     // 14 calendar days window: today through today + 14 days
@@ -81,6 +83,26 @@ app.get('/api/agenda', (req, res) => {
       windowEnd: maxDate,
       totalApproved: inWindow.length,
     });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete event (moves to "Gelöscht")
+app.post('/api/events/:id/delete', (req, res) => {
+  try {
+    const event = db.deleteEvent(req.params.id);
+    res.json({ event, status: 'deleted' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Restore event from "Gelöscht"
+app.post('/api/events/:id/restore', (req, res) => {
+  try {
+    const event = db.restoreEvent(req.params.id);
+    res.json({ event, status: 'restored' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

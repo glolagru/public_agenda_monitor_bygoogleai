@@ -13,6 +13,8 @@ import {
   MessageSquare,
   ChevronDown,
   Link as LinkIcon,
+  Trash2,
+  RotateCcw,
 } from 'lucide-react';
 import { NormalizedEvent, SourceKey } from '../types';
 import { SourceLinkEditModal } from './SourceLinkEditModal';
@@ -22,6 +24,8 @@ interface SpecialistQueueProps {
   events: NormalizedEvent[];
   onApprove: (event: NormalizedEvent) => void;
   onReject: (event: NormalizedEvent) => void;
+  onDelete: (event: NormalizedEvent) => void;
+  onRestore?: (event: NormalizedEvent) => void;
   onOpenReviewModal: (event: NormalizedEvent) => void;
   onReorder: (orderedIds: string[]) => void;
   onUpdateSourceUrl?: (eventId: string, newUrl: string, comment?: string) => Promise<void>;
@@ -34,12 +38,14 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
   events,
   onApprove,
   onReject,
+  onDelete,
+  onRestore,
   onOpenReviewModal,
   onReorder,
   onUpdateSourceUrl,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'approved'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'approved' | 'deleted'>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [selectedRelevances, setSelectedRelevances] = useState<number[]>([1, 2, 3, 4, 5]);
   const [isRelevanceDropdownOpen, setIsRelevanceDropdownOpen] = useState(false);
@@ -73,10 +79,20 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  // Filter logic
+  // Filter logic: Gelöschte Datensätze verschwinden komplett aus allen Ansichten außer aus "Gelöscht"
   const filteredEvents = events.filter((ev) => {
-    if (statusFilter === 'new' && ev.editorialState !== 'candidate' && !ev.isNew) return false;
-    if (statusFilter === 'approved' && ev.editorialState !== 'approved') return false;
+    const isDeleted = ev.editorialState === 'deleted' || Boolean(ev.isDeleted);
+
+    if (statusFilter === 'deleted') {
+      // In der Ansicht "Gelöscht" nur gelöschte Einträge anzeigen
+      if (!isDeleted) return false;
+    } else {
+      // In allen anderen Ansichten (Alle, Neu, Freigegeben) gelöschte Einträge komplett ausblenden
+      if (isDeleted) return false;
+
+      if (statusFilter === 'new' && ev.editorialState !== 'candidate' && !ev.isNew) return false;
+      if (statusFilter === 'approved' && ev.editorialState !== 'approved') return false;
+    }
 
     if (sourceFilter !== 'all' && ev.sourceKey !== sourceFilter) return false;
 
@@ -99,11 +115,7 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
 
   // Prioritization score for status sorting
   const getStatusPriority = (event: NormalizedEvent): number => {
-    // 1. Prüfung nötig (im Feed nicht mehr vorhanden)
-    // 2. Neu (frisch importiert, noch ungesichtet)
-    // 3. Offen / Vorgeschlagen (Kandidat)
-    // 4. Freigegeben
-    // 5. Abgelehnt
+    if (event.editorialState === 'deleted' || event.isDeleted) return 6;
     if (event.editorialState === 'approved') return 4;
     if (event.editorialState === 'rejected') return 5;
     if (event.notSeenInLatestRetrieval) return 1;
@@ -224,6 +236,15 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
   };
 
   const getStatusBadge = (event: NormalizedEvent) => {
+    if (event.editorialState === 'deleted' || event.isDeleted) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-[#FDF2F2] text-[#C53030] border border-[#F5C2C2]">
+          <Trash2 className="w-3 h-3" />
+          Gelöscht
+        </span>
+      );
+    }
+
     // 1. Redaktioneller Status hat oberste Priorität
     if (event.editorialState === 'approved') {
       return (
@@ -308,7 +329,9 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
         </div>
         <div className="text-right text-xs text-[#5A6D75] bg-[#F4F7F8] px-3 py-1.5 rounded-md border border-[#D6E1E5]">
           <div className="font-semibold text-[#182B33]">
-            {sortedEvents.length} von {events.length} Ereignissen
+            {statusFilter === 'deleted'
+              ? `${sortedEvents.length} gelöschte Ereignisse`
+              : `${sortedEvents.length} von ${events.filter((e) => e.editorialState !== 'deleted' && !e.isDeleted).length} aktiven Ereignissen`}
           </div>
           <div className="text-[11px] font-medium text-[#1F6075]">
             {sortField === 'status' && 'Sortiert: Status → Datum'}
@@ -334,7 +357,7 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                   : 'text-[#5A6D75] hover:text-[#182B33]'
               }`}
             >
-              Alle ({events.length})
+              Alle ({events.filter((e) => e.editorialState !== 'deleted' && !e.isDeleted).length})
             </button>
             <button
               type="button"
@@ -346,7 +369,7 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
               }`}
               title="Alle neuen bzw. noch offenen Ereignisse"
             >
-              Neu ({events.filter((e) => e.editorialState === 'candidate' || e.isNew).length})
+              Neu ({events.filter((e) => e.editorialState !== 'deleted' && !e.isDeleted && (e.editorialState === 'candidate' || e.isNew)).length})
             </button>
             <button
               type="button"
@@ -357,7 +380,20 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                   : 'text-[#5A6D75] hover:text-[#182B33]'
               }`}
             >
-              Freigegeben ({events.filter((e) => e.editorialState === 'approved').length})
+              Freigegeben ({events.filter((e) => e.editorialState === 'approved' && !e.isDeleted).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('deleted')}
+              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                statusFilter === 'deleted'
+                  ? 'bg-[#C53030] text-white font-semibold'
+                  : 'text-[#5A6D75] hover:text-[#C53030]'
+              }`}
+              title="Gelöschte Datensätze anzeigen"
+            >
+              <Trash2 className="w-3 h-3" />
+              Gelöscht ({events.filter((e) => e.editorialState === 'deleted' || Boolean(e.isDeleted)).length})
             </button>
           </div>
 
@@ -558,7 +594,7 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                 </div>
               </th>
 
-              <th className="px-3 py-1.5 w-36 text-right">Freigabe / Aktion</th>
+              <th className="px-3 py-1.5 w-44 text-right">Freigabe / Aktion</th>
             </tr>
           </thead>
           <tbody>
@@ -570,12 +606,15 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
               </tr>
             ) : (
               sortedEvents.map((event, index) => {
+                const isDeleted = event.editorialState === 'deleted' || Boolean(event.isDeleted);
                 const isOrangeNew = event.isNew;
                 const isWarning = event.notSeenInLatestRetrieval;
 
                 // Styling row classes according to DESIGN.md
-                // Blue (#DCECF0) for existing candidate, subtle orange (#FFF0E3) for new
-                const rowBg = isOrangeNew
+                // Blue (#DCECF0) for existing candidate, subtle orange (#FFF0E3) for new, light red for deleted
+                const rowBg = isDeleted
+                  ? 'bg-[#FDF6F6] hover:bg-[#FBEAEA]'
+                  : isOrangeNew
                   ? 'bg-[#FFF0E3] hover:bg-[#FFE8D6]'
                   : isWarning
                   ? 'bg-[#FFF6ED] hover:bg-[#FFEDDC]'
@@ -697,32 +736,58 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                       className={`px-3 py-2.5 rounded-r-lg align-middle text-right whitespace-nowrap ${rowBg}`}
                     >
                       <div className="flex items-center justify-end gap-1.5">
-                        {event.editorialState !== 'approved' ? (
+                        {isDeleted ? (
                           <button
                             type="button"
-                            onClick={() => onApprove(event)}
-                            className="bg-[#1F6075] hover:bg-[#164C5C] text-white text-[11px] font-bold px-2.5 py-1 rounded-md transition-colors shadow-xs"
+                            onClick={() => onRestore?.(event)}
+                            title="Datensatz wiederherstellen"
+                            aria-label="Datensatz wiederherstellen"
+                            className="inline-flex items-center gap-1.5 bg-white hover:bg-[#E8F4EC] text-[#28734F] border border-[#C5E3CE] text-[11px] font-bold px-2.5 py-1 rounded-md transition-colors shadow-xs"
                           >
-                            Freigeben
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            Wiederherstellen
                           </button>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => onReject(event)}
-                            className="border border-[#9A2B2B] text-[#9A2B2B] hover:bg-[#F9EBEB] text-[11px] font-semibold px-2 py-1 rounded-md transition-colors"
-                          >
-                            Entziehen
-                          </button>
-                        )}
+                          <>
+                            {event.editorialState !== 'approved' ? (
+                              <button
+                                type="button"
+                                onClick={() => onApprove(event)}
+                                className="bg-[#1F6075] hover:bg-[#164C5C] text-white text-[11px] font-bold px-2.5 py-1 rounded-md transition-colors shadow-xs"
+                              >
+                                Freigeben
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => onReject(event)}
+                                className="border border-[#9A2B2B] text-[#9A2B2B] hover:bg-[#F9EBEB] text-[11px] font-semibold px-2 py-1 rounded-md transition-colors"
+                              >
+                                Entziehen
+                              </button>
+                            )}
 
-                        <button
-                          type="button"
-                          onClick={() => onOpenReviewModal(event)}
-                          title="Prüfen, bewerten und kommentieren"
-                          className="bg-white/80 hover:bg-white text-[#1F6075] border border-[#D6E1E5] p-1.5 rounded-md transition-colors"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                        </button>
+                            <button
+                              type="button"
+                              onClick={() => onOpenReviewModal(event)}
+                              title="Prüfen, bewerten und kommentieren"
+                              className="bg-white/80 hover:bg-white text-[#1F6075] border border-[#D6E1E5] p-1.5 rounded-md transition-colors"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Mülleimersymbol ganz rechts in der Datensatzzeile */}
+                            <button
+                              type="button"
+                              onClick={() => onDelete(event)}
+                              title="Datensatz löschen (in „Gelöscht“ verschieben)"
+                              aria-label="Datensatz löschen"
+                              className="bg-white/80 hover:bg-[#FDF2F2] text-[#8A9EA7] hover:text-[#C53030] border border-[#D6E1E5] hover:border-[#F5C2C2] p-1.5 rounded-md transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
