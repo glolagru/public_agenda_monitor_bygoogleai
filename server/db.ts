@@ -115,8 +115,11 @@ class DatabaseService {
               };
             });
 
-          // Ensure all events have clean, reachable public web URLs
+          // Ensure all events have clean, reachable public web URLs and deleted events lose isNew status
           for (const ev of parsed.events) {
+            if (ev.editorialState === 'deleted' || ev.isDeleted) {
+              ev.isNew = false;
+            }
             if (ev.sourceKey === 'bverwg' && (ev.sourceUrl?.includes('240926U1C1.25.0') || ev.sourceUrl?.includes('250926U2C2.25.0') || ev.sourceUrl?.endsWith('.rss') || ev.sourceUrl?.includes('rechtsprechung/termine'))) {
               ev.sourceUrl = 'https://www.bverwg.de/aktuelles/verhandlungstermine';
             } else if (ev.sourceKey === 'bundespraesident' && (ev.sourceUrl?.includes('RSSNewsfeed') || ev.sourceUrl?.includes('rss-feeds'))) {
@@ -507,6 +510,7 @@ class DatabaseService {
     if (!event) throw new Error(`Event mit ID ${eventId} nicht gefunden`);
     event.editorialState = 'deleted';
     event.isDeleted = true;
+    event.isNew = false;
 
     const reviewId = `rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     this.state.reviews.push({
@@ -526,6 +530,7 @@ class DatabaseService {
     if (!event) throw new Error(`Event mit ID ${eventId} nicht gefunden`);
     event.editorialState = 'candidate';
     event.isDeleted = false;
+    event.isNew = false;
 
     const reviewId = `rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     this.state.reviews.push({

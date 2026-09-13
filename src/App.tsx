@@ -137,6 +137,11 @@ export function App() {
 
   const handleDelete = async (event: NormalizedEvent) => {
     try {
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === event.id ? { ...e, isNew: false, isDeleted: true, editorialState: 'deleted' } : e
+        )
+      );
       const res = await fetch(`/api/events/${event.id}/delete`, {
         method: 'POST',
       });
@@ -145,11 +150,17 @@ export function App() {
       await loadData();
     } catch (err: any) {
       showToast(err.message, 'error');
+      await loadData();
     }
   };
 
   const handleRestore = async (event: NormalizedEvent) => {
     try {
+      setEvents((prev) =>
+        prev.map((e) =>
+          e.id === event.id ? { ...e, isNew: false, isDeleted: false, editorialState: 'candidate' } : e
+        )
+      );
       const res = await fetch(`/api/events/${event.id}/restore`, {
         method: 'POST',
       });
@@ -158,6 +169,7 @@ export function App() {
       await loadData();
     } catch (err: any) {
       showToast(err.message, 'error');
+      await loadData();
     }
   };
 

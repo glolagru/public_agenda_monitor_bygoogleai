@@ -90,7 +90,7 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
       // In allen anderen Ansichten (Alle, Neu, Freigegeben) gelöschte Einträge komplett ausblenden
       if (isDeleted) return false;
 
-      if (statusFilter === 'new' && ev.editorialState !== 'candidate' && !ev.isNew) return false;
+      if (statusFilter === 'new' && !ev.isNew) return false;
       if (statusFilter === 'approved' && ev.editorialState !== 'approved') return false;
     }
 
@@ -367,9 +367,9 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                   ? 'bg-[#A85214] text-white font-semibold'
                   : 'text-[#5A6D75] hover:text-[#182B33]'
               }`}
-              title="Alle neuen bzw. noch offenen Ereignisse"
+              title="Alle neuen Ereignisse"
             >
-              Neu ({events.filter((e) => e.editorialState !== 'deleted' && !e.isDeleted && (e.editorialState === 'candidate' || e.isNew)).length})
+              Neu ({events.filter((e) => e.editorialState !== 'deleted' && !e.isDeleted && e.isNew).length})
             </button>
             <button
               type="button"
