@@ -31,8 +31,9 @@ export function getDateWindow(): { minDate: string; maxDate: string } {
   });
   const todayStr = formatter.format(new Date());
 
+  // 4-week window (28 calendar days ahead)
   const maxDateObj = new Date();
-  maxDateObj.setDate(maxDateObj.getDate() + 14);
+  maxDateObj.setDate(maxDateObj.getDate() + 28);
   const maxDateStr = formatter.format(maxDateObj);
 
   return { minDate: todayStr, maxDate: maxDateStr };
