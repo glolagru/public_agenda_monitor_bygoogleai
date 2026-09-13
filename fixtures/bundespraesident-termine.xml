@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Termine des Bundespräsidenten</title>
+    <link>https://www.bundespraesident.de/DE/termine/termine-node.html</link>
+    <description>Offizieller RSS-Newsfeed der Termine des Bundespräsidenten</description>
+    <language>de-de</language>
+    <item>
+      <title>18. September 2026, 14:30 Uhr: Empfang des finnischen Staatspräsidenten im Schloss Bellevue</title>
+      <link>https://www.bundespraesident.de/SharedDocs/Termine/DE/Frank-Walter-Steinmeier/2026/09/260918-Staatsbesuch-Finnland.html</link>
+      <guid>bp-termin-2026-09-18-1</guid>
+      <pubDate>Mon, 12 Sep 2026 08:00:00 +0200</pubDate>
+      <description><![CDATA[Berlin, Schloss Bellevue: Bundespräsident Frank-Walter Steinmeier empfängt den Staatspräsidenten der Republik Finnland mit militärischen Ehren zu einem bilateralen Arbeitsgespräch über europäische Sicherheitsarchitektur. Beginn: 14:30 Uhr.]]></description>
+    </item>
+    <item>
+      <title>21. September 2026, 11:00 Uhr: Verleihung des Verdienstordens der Bundesrepublik Deutschland</title>
+      <link>https://www.bundespraesident.de/SharedDocs/Termine/DE/Frank-Walter-Steinmeier/2026/09/260921-Ordensverleihung.html</link>
+      <guid>bp-termin-2026-09-21-2</guid>
+      <pubDate>Tue, 13 Sep 2026 09:00:00 +0200</pubDate>
+      <description><![CDATA[Berlin, Schloss Bellevue: Bundespräsident Frank-Walter Steinmeier zeichnet Bürgerinnen und Bürger für herausragendes Engagement für die Demokratie und das Gemeinwohl aus.]]></description>
+    </item>
+    <item>
+      <title>23. September 2026, 16:00 Uhr: Ansprache bei der Jahrestagung der Max-Planck-Gesellschaft</title>
+      <link>https://www.bundespraesident.de/SharedDocs/Termine/DE/Frank-Walter-Steinmeier/2026/09/260923-Max-Planck.html</link>
+      <guid>bp-termin-2026-09-23-3</guid>
+      <pubDate>Wed, 14 Sep 2026 10:00:00 +0200</pubDate>
+      <description><![CDATA[München: Bundespräsident Frank-Walter Steinmeier hält die Eröffnungsrede zur Zukunft der Grundlagenforschung in Deutschland und Europa.]]></description>
+    </item>
+  </channel>
+</rss>

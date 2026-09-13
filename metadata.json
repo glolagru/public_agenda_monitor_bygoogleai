@@ -1,0 +1,6 @@
+{
+  "name": "Public Agenda Monitor",
+  "description": "Redaktionelle Prüfwarteschlange und 14-Tage-Agenda für Dokumentationsjournalisten und Redaktionen auf Basis öffentlicher Quellen.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

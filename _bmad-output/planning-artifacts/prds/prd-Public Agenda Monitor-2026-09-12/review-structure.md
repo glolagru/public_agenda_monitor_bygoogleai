@@ -1,0 +1,13 @@
+# Structural review — Public Agenda Monitor PRD
+
+This document exists to help an internal, non-developer editorial team and MVP implementers agree on what the Public Agenda Monitor must do for the hackathon.  
+Chosen model: **Strategic/Context (Pyramid)** — a PRD should foreground the decision and scope, then group supporting requirements.
+
+| Pass | Original Text | Revised Text | Changes |
+| --- | --- | --- | --- |
+| structure | **FR-9: Use feedback to improve suggestions** (101 words), especially the threshold of three events, rounded score difference, 1–5 cap, and approval-rate calculation | **MOVE** the calculation mechanics to the later implementation SPEC or Architecture Spine. Keep the PRD requirement at: “Feedback from reviewed, comparable Candidate Events may inform an explainable, advisory Suggested Score and priority suggestion.” | The editorial team needs the promise and guardrail, not an early algorithm. This reduces premature technical detail while preserving intent; saves about **50–65 words**. |
+| structure | **§5 Cross-Cutting Requirements and Guardrails** (105 words) repeats protections already testably stated in FR-4, FR-8, FR-12 and FR-13 | **CONDENSE** to a short “MVP guardrails” callout containing only the two principles that span the document: human approval is required; only public official sources are retrieved. | The detailed retention and failure rules are clearer where the user encounters the related feature. This removes duplicated requirements; saves about **45–60 words**. |
+| structure | **§7 MVP Scope** (96 words) repeats the Feature headings and the Non-Goals, but serves as the short decision recap for a non-developer audience | **PRESERVE** as an executive summary; optionally shorten each item to the noun phrases already used in the feature sections. | This is useful reinforcement rather than wasteful repetition: it lets readers confirm the hackathon boundary without rereading 14 requirements. Potential saving: **10–20 words**, but no cut is necessary. |
+| structure | **§9 Open Questions** (18 words): “No product-level open questions remain …” | **CUT** the section when finalizing, or replace it with a brief release-status line in the front matter. | A resolved-question section does not advance a reader’s understanding and slightly interrupts the close of the PRD. Saves **18 words**. |
+
+**Summary:** 4 recommendations; accepting the two substantive reductions and the resolved-question cut removes about **113–143 words** (**5–6%** of 2,217 words). No length target was provided. The retained Scope summary is deliberately repetitive enough to aid human readers; no meaningful comprehension trade-off is expected from the recommended cuts.

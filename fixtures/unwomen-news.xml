@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>UN Women News and Stories</title>
+    <link>https://www.unwomen.org/en/news-stories</link>
+    <description>Latest news, high-level panel announcements, and statements from UN Women.</description>
+    <language>en</language>
+    <item>
+      <title>High-Level Ministerial Meeting on Gender Equality and Care Economy at UN Headquarters</title>
+      <link>https://www.unwomen.org/en/news-stories/announcement/2026/09/ministerial-meeting-gender-equality-care-economy</link>
+      <guid>unwomen-news-20260916-1</guid>
+      <pubDate>Mon, 14 Sep 2026 12:00:00 +0000</pubDate>
+      <description><![CDATA[New York: Ministers and civil society leaders convene on 16 September 2026 at 15:00 UTC to address systemic investments in unpaid care work and social protection frameworks globally.]]></description>
+    </item>
+    <item>
+      <title>Global Consultation on Eliminating Gender-Based Violence in Digital Spaces</title>
+      <link>https://www.unwomen.org/en/news-stories/press-release/2026/09/global-consultation-violence-digital-spaces</link>
+      <guid>unwomen-news-20260919-2</guid>
+      <pubDate>Tue, 15 Sep 2026 09:30:00 +0000</pubDate>
+      <description><![CDATA[Geneva: On 19 September 2026, UN Women hosts a multi-stakeholder dialogue on safeguarding women journalists, human rights defenders, and public figures online.]]></description>
+    </item>
+  </channel>
+</rss>

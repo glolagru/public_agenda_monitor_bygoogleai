@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>UN Women Publications and Reports</title>
+    <link>https://www.unwomen.org/en/digital-library/publications</link>
+    <description>Official policy briefs, statistical datasets, and global reports on gender equality.</description>
+    <language>en</language>
+    <item>
+      <title>Launch of the Global Gender Snapshot 2026: Progress on the Sustainable Development Goals</title>
+      <link>https://www.unwomen.org/en/digital-library/publications/2026/09/progress-on-the-sustainable-development-goals-the-gender-snapshot-2026</link>
+      <guid>unwomen-pub-20260915-1</guid>
+      <pubDate>Mon, 14 Sep 2026 14:00:00 +0000</pubDate>
+      <description><![CDATA[Publication and press briefing on 15 September 2026: The latest annual flagship gender data report analyzing indicators across all 17 Sustainable Development Goals, spotlighting global poverty and care burdens.]]></description>
+    </item>
+  </channel>
+</rss>

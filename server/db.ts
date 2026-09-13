@@ -1,0 +1,462 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {
+  EditorialState,
+  EventType,
+  NormalizedEvent,
+  RetrievalRun,
+  ReviewEntry,
+  SourceDefinition,
+  SourceKey,
+} from '../src/types';
+
+const DATA_DIR = path.resolve(process.cwd(), 'data');
+const DATA_FILE = path.join(DATA_DIR, 'agenda_monitor.json');
+
+export interface DatabaseState {
+  sources: SourceDefinition[];
+  events: NormalizedEvent[];
+  reviews: ReviewEntry[];
+  runs: RetrievalRun[];
+  lastSpecialistReviewAt: string | null;
+}
+
+const DEFAULT_SOURCES: SourceDefinition[] = [
+  {
+    id: 'src-bverwg',
+    key: 'bverwg',
+    name: 'Bundesverwaltungsgericht',
+    category: 'Gerichte',
+    publicWebUrl: 'https://www.bverwg.de/rechtsprechung/termine',
+    primaryUrl: 'https://www.bverwg.de/rss/termine.rss',
+    qualificationRule: 'Verhandlungs- und Urteilstermine der Senate',
+    defaultTopic: 'Verwaltungsrecht',
+    defaultScore: 4,
+    healthStatus: 'healthy',
+    lastRetrievalAt: null,
+    lastErrorMessage: null,
+    eventsCount: 0,
+  },
+  {
+    id: 'src-bundespraesident',
+    key: 'bundespraesident',
+    name: 'Bundespräsident',
+    category: 'Staat & Politik',
+    publicWebUrl: 'https://www.bundespraesident.de/DE/termine/termine-node.html',
+    primaryUrl: 'https://www.bundespraesident.de/DE/termine/termine-node.html',
+    fallbackUrl:
+      'https://www.bundespraesident.de/SiteGlobals/Functions/RSSFeed/DE/RSSNewsfeed/Termine/RSSNewsfeed.xml?nn=127360',
+    qualificationRule: 'Öffentliche Termine des Bundespräsidenten laut Terminkalender/Feed',
+    defaultTopic: 'Staatsoberhaupt & Repräsentation',
+    defaultScore: 4,
+    healthStatus: 'healthy',
+    lastRetrievalAt: null,
+    lastErrorMessage: null,
+    eventsCount: 0,
+  },
+  {
+    id: 'src-un-women-news',
+    key: 'un_women_news',
+    name: 'UN Women (News & Panels)',
+    category: 'Internationale Organisationen',
+    publicWebUrl: 'https://www.unwomen.org/en/news-stories',
+    primaryUrl: 'https://www.unwomen.org/en/feeds/news',
+    qualificationRule: 'High-Level Panels, Ministertreffen zu Gleichstellung & Gewaltprävention',
+    defaultTopic: 'Gleichstellung & Menschenrechte',
+    defaultScore: 4,
+    healthStatus: 'healthy',
+    lastRetrievalAt: null,
+    lastErrorMessage: null,
+    eventsCount: 0,
+  },
+  {
+    id: 'src-un-women-publications',
+    key: 'un_women_publications',
+    name: 'UN Women (Publikationen)',
+    category: 'Internationale Organisationen',
+    publicWebUrl: 'https://www.unwomen.org/en/digital-library/publications',
+    primaryUrl: 'https://www.unwomen.org/en/feeds/publications',
+    qualificationRule: 'Internationale Berichte & quantitative Gender-Datensätze',
+    defaultTopic: 'Globale Gender-Daten',
+    defaultScore: 3,
+    healthStatus: 'healthy',
+    lastRetrievalAt: null,
+    lastErrorMessage: null,
+    eventsCount: 0,
+  },
+  {
+    id: 'src-bverfg',
+    key: 'bverfg',
+    name: 'Bundesverfassungsgericht',
+    category: 'Gerichte',
+    publicWebUrl:
+      'https://www.bundesverfassungsgericht.de/DE/Aktuelles/TermineWochenausblick/termine-Wochenausblick_node.html',
+    primaryUrl:
+      'https://www.bundesverfassungsgericht.de/DE/Aktuelles/TermineWochenausblick/termine-Wochenausblick_node.html',
+    qualificationRule: 'Mündliche Verhandlungen und Urteilsverkündungen im Wochenausblick',
+    defaultTopic: 'Verfassungsrecht',
+    defaultScore: 5,
+    healthStatus: 'healthy',
+    lastRetrievalAt: null,
+    lastErrorMessage: null,
+    eventsCount: 0,
+  },
+];
+
+class DatabaseService {
+  private state: DatabaseState;
+
+  constructor() {
+    this.state = this.loadState();
+  }
+
+  private loadState(): DatabaseState {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+
+      if (fs.existsSync(DATA_FILE)) {
+        const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (parsed.sources && parsed.events && parsed.reviews) {
+          // Ensure all sources have publicWebUrl
+          parsed.sources = parsed.sources.map((s: SourceDefinition) => {
+            const def = DEFAULT_SOURCES.find((d) => d.key === s.key);
+            return {
+              ...s,
+              publicWebUrl: s.publicWebUrl || def?.publicWebUrl || s.primaryUrl,
+            };
+          });
+
+          // Ensure all events have clean, reachable public web URLs
+          for (const ev of parsed.events) {
+            if (ev.sourceKey === 'bverwg' && (ev.sourceUrl?.includes('240926U1C1.25.0') || ev.sourceUrl?.includes('250926U2C2.25.0') || ev.sourceUrl?.endsWith('.rss'))) {
+              ev.sourceUrl = 'https://www.bverwg.de/rechtsprechung/termine';
+            } else if (ev.sourceKey === 'bundespraesident' && (ev.sourceUrl?.includes('RSSNewsfeed') || ev.sourceUrl?.includes('rss-feeds'))) {
+              ev.sourceUrl = 'https://www.bundespraesident.de/DE/termine/termine-node.html';
+            } else if (ev.sourceKey === 'un_women_news' && ev.sourceUrl?.includes('/feeds/')) {
+              ev.sourceUrl = 'https://www.unwomen.org/en/news-stories';
+            } else if (ev.sourceKey === 'un_women_publications' && ev.sourceUrl?.includes('/feeds/')) {
+              ev.sourceUrl = 'https://www.unwomen.org/en/digital-library/publications';
+            }
+          }
+
+          return parsed;
+        }
+      }
+    } catch (err) {
+      console.error('Error loading data file, initializing fresh:', err);
+    }
+
+    const initial: DatabaseState = {
+      sources: DEFAULT_SOURCES,
+      events: [],
+      reviews: [],
+      runs: [],
+      lastSpecialistReviewAt: null,
+    };
+    this.saveState(initial);
+    return initial;
+  }
+
+  private saveState(state = this.state) {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      fs.writeFileSync(DATA_FILE, JSON.stringify(state, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('Error saving data file:', err);
+    }
+  }
+
+  public getSources(): SourceDefinition[] {
+    return this.state.sources.map((s) => {
+      const count = this.state.events.filter((e) => e.sourceKey === s.key).length;
+      return { ...s, eventsCount: count };
+    });
+  }
+
+  public getSourceByKey(key: SourceKey): SourceDefinition | undefined {
+    return this.state.sources.find((s) => s.key === key);
+  }
+
+  public updateSourceHealth(
+    key: SourceKey,
+    health: 'healthy' | 'warning' | 'error',
+    errorMessage: string | null = null
+  ) {
+    const src = this.state.sources.find((s) => s.key === key);
+    if (src) {
+      src.healthStatus = health;
+      src.lastRetrievalAt = new Date().toISOString();
+      src.lastErrorMessage = errorMessage;
+      this.saveState();
+    }
+  }
+
+  public getLearningStats(sourceKey: SourceKey, eventType: EventType) {
+    const matchingReviewed = this.state.events.filter(
+      (e) => e.sourceKey === sourceKey && e.eventType === eventType && e.reviewCount > 0
+    );
+
+    if (matchingReviewed.length < 3) {
+      return {
+        hasAdjustment: false,
+        adjustment: 0,
+        approvedCount: 0,
+        totalReviewed: matchingReviewed.length,
+        approvalRate: 0,
+        explanation: 'Standard-Relevanzregel (weniger als 3 geprüfte Ereignisse in dieser Kategorie)',
+      };
+    }
+
+    const approvedCount = matchingReviewed.filter((e) => e.editorialState === 'approved').length;
+    const approvalRate = Math.round((approvedCount / matchingReviewed.length) * 100);
+
+    // Rounded difference between prior editorial scores and suggested scores
+    let diffSum = 0;
+    let countWithScore = 0;
+    for (const ev of matchingReviewed) {
+      if (ev.editorialScore !== null) {
+        diffSum += ev.editorialScore - ev.suggestedScore;
+        countWithScore++;
+      }
+    }
+
+    const avgDiff = countWithScore > 0 ? diffSum / countWithScore : 0;
+    const roundedAdjustment = Math.round(avgDiff);
+
+    return {
+      hasAdjustment: roundedAdjustment !== 0,
+      adjustment: roundedAdjustment,
+      approvedCount,
+      totalReviewed: matchingReviewed.length,
+      approvalRate,
+      explanation: `Lernschleife aktiv: ${roundedAdjustment >= 0 ? '+' : ''}${roundedAdjustment} Score-Anpassung basierend auf ${matchingReviewed.length} redaktionellen Prüfungen (${approvalRate}% Freigabequote).`,
+    };
+  }
+
+  public upsertEvents(
+    sourceKey: SourceKey,
+    newItems: Omit<NormalizedEvent, 'id' | 'sourceId'>[],
+    isFixture = false
+  ): { added: number; updated: number; total: number } {
+    const source = this.state.sources.find((s) => s.key === sourceKey);
+    const sourceId = source ? source.id : `src-${sourceKey}`;
+    const now = new Date().toISOString();
+
+    let added = 0;
+    let updated = 0;
+    const seenKeys = new Set<string>();
+
+    for (const item of newItems) {
+      seenKeys.add(item.sourceEventKey);
+      const existing = this.state.events.find(
+        (e) => e.sourceKey === sourceKey && e.sourceEventKey === item.sourceEventKey
+      );
+
+      // Learning loop calculation for suggested score
+      const learning = this.getLearningStats(sourceKey, item.eventType);
+      let calculatedSuggestedScore = Math.max(
+        1,
+        Math.min(5, item.suggestedScore + learning.adjustment)
+      );
+
+      if (existing) {
+        // Safe update: retain editorial state, score, comments, priority, and original review entries
+        existing.sourceUrl = item.sourceUrl;
+        existing.title = item.title;
+        existing.sourceDate = item.sourceDate;
+        existing.sourceTime = item.sourceTime;
+        existing.topic = item.topic || existing.topic;
+        existing.organizer = item.organizer || existing.organizer;
+        existing.location = item.location || existing.location;
+        existing.originalText = item.originalText;
+        existing.lastSeenAt = now;
+        existing.notSeenInLatestRetrieval = false;
+        existing.fixture = isFixture;
+        // Do NOT overwrite editorialState or editorialScore
+        updated++;
+      } else {
+        const id = `ev-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        const maxPriority = this.state.events.reduce(
+          (max, e) => (e.manualPriority > max ? e.manualPriority : max),
+          0
+        );
+
+        this.state.events.push({
+          ...item,
+          id,
+          sourceId,
+          suggestedScore: calculatedSuggestedScore,
+          suggestedScoreRule: learning.hasAdjustment
+            ? `${item.suggestedScoreRule} (${learning.explanation})`
+            : item.suggestedScoreRule,
+          suggestedScoreAdjustment: learning.adjustment,
+          groupApprovalRate: learning.approvalRate,
+          manualPriority: maxPriority + 1,
+          firstSeenAt: now,
+          lastSeenAt: now,
+          notSeenInLatestRetrieval: false,
+          isNew: true,
+          reviewCount: 0,
+          latestComment: null,
+          fixture: isFixture,
+        });
+        added++;
+      }
+    }
+
+    // AD-11: Events of this source not in this run become notSeenInLatestRetrieval = true (for unreviewed candidates)
+    for (const e of this.state.events) {
+      if (e.sourceKey === sourceKey && !seenKeys.has(e.sourceEventKey)) {
+        if (e.editorialState !== 'approved') {
+          e.notSeenInLatestRetrieval = true;
+        }
+      }
+    }
+
+    this.saveState();
+    return { added, updated, total: this.state.events.length };
+  }
+
+  public recordRun(run: Omit<RetrievalRun, 'id'>): RetrievalRun {
+    const id = `run-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const fullRun: RetrievalRun = { ...run, id };
+    this.state.runs.unshift(fullRun);
+    if (this.state.runs.length > 50) this.state.runs.pop();
+    this.saveState();
+    return fullRun;
+  }
+
+  public getRuns(): RetrievalRun[] {
+    return this.state.runs;
+  }
+
+  public getEvents(): NormalizedEvent[] {
+    // Sort by manual priority, then date
+    return [...this.state.events].sort((a, b) => {
+      if (a.manualPriority !== b.manualPriority) {
+        return a.manualPriority - b.manualPriority;
+      }
+      return a.sourceDate.localeCompare(b.sourceDate);
+    });
+  }
+
+  public getEventById(id: string): NormalizedEvent | undefined {
+    return this.state.events.find((e) => e.id === id);
+  }
+
+  public getReviewsForEvent(eventId: string): ReviewEntry[] {
+    return this.state.reviews
+      .filter((r) => r.eventId === eventId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  public addReview(
+    eventId: string,
+    decision: 'approved' | 'rejected' | 'updated' | 'deferred',
+    editorialScore?: number | null,
+    comment?: string | null,
+    sourceUrl?: string | null
+  ): { event: NormalizedEvent; review: ReviewEntry } {
+    const event = this.state.events.find((e) => e.id === eventId);
+    if (!event) throw new Error(`Event mit ID ${eventId} nicht gefunden`);
+
+    if (sourceUrl && sourceUrl.trim() && sourceUrl.trim() !== event.sourceUrl) {
+      event.sourceUrl = sourceUrl.trim();
+    }
+
+    const reviewId = `rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const newReview: ReviewEntry = {
+      id: reviewId,
+      eventId,
+      decision,
+      editorialScore: editorialScore ?? event.editorialScore,
+      comment: comment?.trim() || null,
+      createdAt: new Date().toISOString(),
+    };
+
+    this.state.reviews.push(newReview);
+
+    // Apply to event
+    if (decision === 'approved') {
+      event.editorialState = 'approved';
+      event.notSeenInLatestRetrieval = false;
+    } else if (decision === 'rejected') {
+      event.editorialState = 'rejected';
+      event.notSeenInLatestRetrieval = false;
+    }
+
+    if (editorialScore !== undefined && editorialScore !== null) {
+      event.editorialScore = editorialScore;
+    }
+
+    if (comment?.trim()) {
+      event.latestComment = comment.trim();
+    }
+
+    event.isNew = false;
+    event.notSeenInLatestRetrieval = false;
+    event.reviewCount = (event.reviewCount || 0) + 1;
+    this.state.lastSpecialistReviewAt = new Date().toISOString();
+
+    this.saveState();
+    return { event, review: newReview };
+  }
+
+  public updateEventSourceUrl(
+    eventId: string,
+    sourceUrl: string,
+    comment?: string | null
+  ): { event: NormalizedEvent; review: ReviewEntry } {
+    const event = this.state.events.find((e) => e.id === eventId);
+    if (!event) throw new Error(`Event mit ID ${eventId} nicht gefunden`);
+
+    const trimmedUrl = sourceUrl.trim();
+    if (!trimmedUrl) throw new Error('Quellenlink darf nicht leer sein');
+
+    const prevUrl = event.sourceUrl;
+    event.sourceUrl = trimmedUrl;
+
+    const reviewId = `rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const note =
+      comment?.trim() ||
+      `Öffentlicher Quellenlink aktualisiert auf: ${trimmedUrl}`;
+    const newReview: ReviewEntry = {
+      id: reviewId,
+      eventId,
+      decision: 'updated',
+      editorialScore: event.editorialScore,
+      comment: note,
+      createdAt: new Date().toISOString(),
+    };
+
+    this.state.reviews.push(newReview);
+    event.latestComment = note;
+    event.reviewCount = (event.reviewCount || 0) + 1;
+    this.state.lastSpecialistReviewAt = new Date().toISOString();
+
+    this.saveState();
+    return { event, review: newReview };
+  }
+
+  public updateManualPriority(orderedIds: string[]) {
+    orderedIds.forEach((id, index) => {
+      const ev = this.state.events.find((e) => e.id === id);
+      if (ev) {
+        ev.manualPriority = index + 1;
+      }
+    });
+    this.saveState();
+  }
+
+  public clearAllAndSeedWithFixtures(events: NormalizedEvent[]) {
+    this.state.events = events;
+    this.saveState();
+  }
+}
+
+export const db = new DatabaseService();
