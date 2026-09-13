@@ -6,6 +6,7 @@ import {
   initializeDatabaseWithSeed,
   retrieveAllSources,
   retrieveSource,
+  testReset,
 } from './server/retrieval';
 import { SourceKey } from './src/types';
 
@@ -190,6 +191,20 @@ app.post('/api/events/reorder', (req, res) => {
     }
     db.updateManualPriority(orderedIds);
     res.json({ success: true, count: orderedIds.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Test Reset: setzt alle Kennzeichnungen der Datensätze zurück für frischen Workflow-Test
+app.post('/api/test-reset', async (req, res) => {
+  try {
+    const result = await testReset();
+    res.json({
+      success: true,
+      message: 'Alle Kennzeichnungen der Datensätze wurden erfolgreich zurückgesetzt.',
+      count: result.count,
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

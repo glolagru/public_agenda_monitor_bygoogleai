@@ -15,7 +15,7 @@ export interface SourceLinkMeta {
 export function getSourcePublicWebUrl(sourceKey: SourceKey): string {
   switch (sourceKey) {
     case 'bverwg':
-      return 'https://www.bverwg.de/rechtsprechung/termine';
+      return 'https://www.bverwg.de/aktuelles/verhandlungstermine';
     case 'bundespraesident':
       return 'https://www.bundespraesident.de/DE/termine/termine-node.html';
     case 'un_women_news':

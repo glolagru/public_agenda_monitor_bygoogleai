@@ -10,7 +10,7 @@ import {
   Filter,
   Sparkles,
   AlertTriangle,
-  MessageSquare,
+  Info,
   ChevronDown,
   Link as LinkIcon,
   Trash2,
@@ -594,13 +594,17 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                 </div>
               </th>
 
-              <th className="px-3 py-1.5 w-44 text-right">Freigabe / Aktion</th>
+              {/* Freigabe - genau mittig über dem Toggle */}
+              <th className="px-3 py-1.5 w-24 text-center">Freigabe</th>
+
+              {/* Aktionen ganz rechts (ohne Text) */}
+              <th className="px-3 py-1.5 w-20 text-right"></th>
             </tr>
           </thead>
           <tbody>
             {sortedEvents.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-12 text-center text-xs text-[#5A6D75]">
+                <td colSpan={10} className="py-12 text-center text-xs text-[#5A6D75]">
                   Keine Ereignisse für die gewählten Filterkriterien gefunden.
                 </td>
               </tr>
@@ -731,7 +735,56 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                       {getStatusBadge(event)}
                     </td>
 
-                    {/* Release / Review Action buttons */}
+                    {/* Freigabe-Toggle - genau mittig unter der Spaltenüberschrift Freigabe */}
+                    <td className={`px-3 py-2.5 align-middle text-center whitespace-nowrap ${rowBg}`}>
+                      {!isDeleted ? (
+                        (() => {
+                          const isApproved = event.editorialState === 'approved';
+                          return (
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={isApproved}
+                              id={`toggle-freigabe-${event.id}`}
+                              title={
+                                isApproved
+                                  ? 'Freigegeben (Rechts) – Klicken zum Entziehen'
+                                  : 'Nicht freigegeben (Links) – Klicken zur Freigabe'
+                              }
+                              aria-label={isApproved ? 'Freigabe entziehen' : 'Datensatz freigeben'}
+                              onClick={() => {
+                                if (isApproved) {
+                                  onReject(event);
+                                } else {
+                                  onApprove(event);
+                                }
+                              }}
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#1F6075] focus:ring-offset-1 ${
+                                isApproved ? 'bg-[#1F6075]' : 'bg-[#CBD5E1]'
+                              }`}
+                            >
+                              <span className="sr-only">
+                                {isApproved ? 'Freigegeben' : 'Nicht freigegeben'}
+                              </span>
+                              <span
+                                aria-hidden="true"
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out flex items-center justify-center ${
+                                  isApproved ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                              >
+                                {isApproved && (
+                                  <Check className="w-2.5 h-2.5 text-[#1F6075] stroke-[3]" />
+                                )}
+                              </span>
+                            </button>
+                          );
+                        })()
+                      ) : (
+                        <span className="text-xs text-[#A0B0B7]">—</span>
+                      )}
+                    </td>
+
+                    {/* Aktionen (Info & Löschen / Wiederherstellen) ganz rechts */}
                     <td
                       className={`px-3 py-2.5 rounded-r-lg align-middle text-right whitespace-nowrap ${rowBg}`}
                     >
@@ -749,31 +802,15 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                           </button>
                         ) : (
                           <>
-                            {event.editorialState !== 'approved' ? (
-                              <button
-                                type="button"
-                                onClick={() => onApprove(event)}
-                                className="bg-[#1F6075] hover:bg-[#164C5C] text-white text-[11px] font-bold px-2.5 py-1 rounded-md transition-colors shadow-xs"
-                              >
-                                Freigeben
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => onReject(event)}
-                                className="border border-[#9A2B2B] text-[#9A2B2B] hover:bg-[#F9EBEB] text-[11px] font-semibold px-2 py-1 rounded-md transition-colors"
-                              >
-                                Entziehen
-                              </button>
-                            )}
-
+                            {/* Info-Button (Info im Kreis) */}
                             <button
                               type="button"
                               onClick={() => onOpenReviewModal(event)}
-                              title="Prüfen, bewerten und kommentieren"
-                              className="bg-white/80 hover:bg-white text-[#1F6075] border border-[#D6E1E5] p-1.5 rounded-md transition-colors"
+                              title="Details & redaktionelle Prüfung anzeigen"
+                              aria-label="Details und redaktionelle Prüfung anzeigen"
+                              className="bg-white/80 hover:bg-[#F4F7F8] text-[#1F6075] hover:text-[#164C5C] border border-[#D6E1E5] p-1.5 rounded-md transition-colors"
                             >
-                              <MessageSquare className="w-3.5 h-3.5" />
+                              <Info className="w-3.5 h-3.5" />
                             </button>
 
                             {/* Mülleimersymbol ganz rechts in der Datensatzzeile */}

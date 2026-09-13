@@ -239,7 +239,7 @@ export function parseBverwgXml(
       } catch {
         // Fallback
       }
-    } else if (resolvedUrl === 'https://www.bverwg.de/rechtsprechung/termine' || !resolvedUrl.startsWith('http')) {
+    } else if (resolvedUrl === 'https://www.bverwg.de/aktuelles/verhandlungstermine' || resolvedUrl === 'https://www.bverwg.de/rechtsprechung/termine' || !resolvedUrl.startsWith('http')) {
       if (caseMatch) {
         const cleanQ = caseMatch[0].replace(/^BVerwG\s+/i, '').trim();
         const queryParam = cleanQ.split(/\s+/).map(encodeURIComponent).join('+');

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
 import { NormalizedEvent, SourceKey } from '../types';
 
-export const UN_WOMEN_NEWS_URL = 'https://www.unwomen.org/en/feeds/news';
+export const UN_WOMEN_NEWS_URL = 'https://www.unwomen.org/en/rss-feeds/news';
 
 function decodeXml(value: string): string {
   return value

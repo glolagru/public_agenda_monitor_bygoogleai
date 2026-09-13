@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Shield, Calendar, Newspaper } from 'lucide-react';
+import { RefreshCw, Shield, Calendar, Newspaper, RotateCcw } from 'lucide-react';
 
 interface HeaderProps {
   activeRole: 'specialist' | 'editorial';
@@ -7,6 +7,8 @@ interface HeaderProps {
   onRefreshSources: () => void;
   isRefreshing: boolean;
   onOpenSourcesModal: () => void;
+  onTestReset: () => void;
+  isResetting?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,6 +17,8 @@ export const Header: React.FC<HeaderProps> = ({
   onRefreshSources,
   isRefreshing,
   onOpenSourcesModal,
+  onTestReset,
+  isResetting = false,
 }) => {
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#D6E1E5] px-6 py-4 bg-white">
@@ -66,6 +70,19 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Redaktion</span>
           </button>
         </div>
+
+        {/* Test Reset Button */}
+        <button
+          type="button"
+          id="test-reset-btn"
+          onClick={onTestReset}
+          disabled={isResetting}
+          title="Alle Kennzeichnungen der Datensätze zurücksetzen (wie frischer Appstart)"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-[#D6E1E5] bg-white hover:bg-[#F4F7F8] text-[#1F6075] hover:text-[#164C5C] active:scale-[0.98] transition-all disabled:opacity-50 shadow-2xs cursor-pointer"
+        >
+          <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? 'animate-spin' : ''}`} />
+          <span>{isResetting ? 'Wird zurückgesetzt...' : 'Test Reset'}</span>
+        </button>
 
         {/* Action button */}
         {activeRole === 'specialist' && (

@@ -14,6 +14,7 @@ export function App() {
   const [sources, setSources] = useState<SourceDefinition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [reviewModalEvent, setReviewModalEvent] = useState<NormalizedEvent | null>(null);
   const [isSourcesModalOpen, setIsSourcesModalOpen] = useState(false);
   const [toast, setToast] = useState<{
@@ -71,6 +72,20 @@ export function App() {
   };
 
   const handleApprove = async (event: NormalizedEvent) => {
+    // Optimistic local state update for instantaneous toggle animation
+    setEvents((prev) =>
+      prev.map((e) =>
+        e.id === event.id
+          ? {
+              ...e,
+              editorialState: 'approved',
+              editorialScore: e.editorialScore ?? e.suggestedScore,
+              notSeenInLatestRetrieval: false,
+            }
+          : e
+      )
+    );
+
     try {
       const res = await fetch(`/api/events/${event.id}/review`, {
         method: 'POST',
@@ -81,14 +96,28 @@ export function App() {
         }),
       });
       if (!res.ok) throw new Error('Fehler beim Freigeben');
-      showToast(`„${event.title.slice(0, 35)}...“ für Redaktion freigegeben.`);
+      showToast(`„${event.title.slice(0, 35)}...“ freigegeben.`);
       await loadData();
     } catch (err: any) {
       showToast(err.message, 'error');
+      await loadData();
     }
   };
 
   const handleReject = async (event: NormalizedEvent) => {
+    // Optimistic local state update for instantaneous toggle animation
+    setEvents((prev) =>
+      prev.map((e) =>
+        e.id === event.id
+          ? {
+              ...e,
+              editorialState: 'rejected',
+              notSeenInLatestRetrieval: false,
+            }
+          : e
+      )
+    );
+
     try {
       const res = await fetch(`/api/events/${event.id}/review`, {
         method: 'POST',
@@ -97,11 +126,12 @@ export function App() {
           decision: 'rejected',
         }),
       });
-      if (!res.ok) throw new Error('Fehler beim Ablehnen');
-      showToast(`„${event.title.slice(0, 35)}...“ abgelehnt.`);
+      if (!res.ok) throw new Error('Fehler beim Zurücknehmen der Freigabe');
+      showToast(`„${event.title.slice(0, 35)}...“ nicht freigegeben.`);
       await loadData();
     } catch (err: any) {
       showToast(err.message, 'error');
+      await loadData();
     }
   };
 
@@ -226,6 +256,20 @@ export function App() {
     }
   };
 
+  const handleTestReset = async () => {
+    setIsResetting(true);
+    try {
+      const res = await fetch('/api/test-reset', { method: 'POST' });
+      if (!res.ok) throw new Error('Fehler beim Zurücksetzen der Kennzeichnungen');
+      await loadData();
+      showToast('Test Reset erfolgreich: Alle Kennzeichnungen und Bewertungen wurden zurückgesetzt.');
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const handleResetDemo = async () => {
     try {
       const res = await fetch('/api/reset-demo', { method: 'POST' });
@@ -253,6 +297,8 @@ export function App() {
           onRefreshSources={() => handleRefreshSources()}
           isRefreshing={isRefreshing}
           onOpenSourcesModal={() => setIsSourcesModalOpen(true)}
+          onTestReset={handleTestReset}
+          isResetting={isResetting}
         />
 
         {/* Main Content Area */}

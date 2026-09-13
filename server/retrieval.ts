@@ -128,3 +128,10 @@ export async function initializeDatabaseWithSeed() {
     }
   }
 }
+
+export async function testReset() {
+  if (db.getEvents().length === 0) {
+    await retrieveAllSources(true);
+  }
+  return db.resetAllEventMarkings();
+}

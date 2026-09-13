@@ -43,7 +43,7 @@ const DEFAULT_SOURCES: SourceDefinition[] = [
     key: 'bverwg',
     name: 'Bundesverwaltungsgericht',
     category: 'Gerichte',
-    publicWebUrl: 'https://www.bverwg.de/rechtsprechung/termine',
+    publicWebUrl: 'https://www.bverwg.de/aktuelles/verhandlungstermine',
     primaryUrl: 'https://www.bverwg.de/rss/termine.rss',
     qualificationRule: 'Verhandlungs- und Urteilstermine der Senate',
     defaultTopic: 'Verwaltungsrecht',
@@ -117,8 +117,8 @@ class DatabaseService {
 
           // Ensure all events have clean, reachable public web URLs
           for (const ev of parsed.events) {
-            if (ev.sourceKey === 'bverwg' && (ev.sourceUrl?.includes('240926U1C1.25.0') || ev.sourceUrl?.includes('250926U2C2.25.0') || ev.sourceUrl?.endsWith('.rss'))) {
-              ev.sourceUrl = 'https://www.bverwg.de/rechtsprechung/termine';
+            if (ev.sourceKey === 'bverwg' && (ev.sourceUrl?.includes('240926U1C1.25.0') || ev.sourceUrl?.includes('250926U2C2.25.0') || ev.sourceUrl?.endsWith('.rss') || ev.sourceUrl?.includes('rechtsprechung/termine'))) {
+              ev.sourceUrl = 'https://www.bverwg.de/aktuelles/verhandlungstermine';
             } else if (ev.sourceKey === 'bundespraesident' && (ev.sourceUrl?.includes('RSSNewsfeed') || ev.sourceUrl?.includes('rss-feeds'))) {
               ev.sourceUrl = 'https://www.bundespraesident.de/DE/termine/termine-node.html';
             } else if (ev.sourceKey === 'un_women_news' && ev.sourceUrl?.includes('/feeds/')) {
@@ -553,6 +553,33 @@ class DatabaseService {
   public clearAllAndSeedWithFixtures(events: NormalizedEvent[]) {
     this.state.events = events;
     this.saveState();
+  }
+
+  public resetAllEventMarkings(): { count: number } {
+    this.state.reviews = [];
+    this.state.lastSpecialistReviewAt = null;
+
+    let index = 1;
+    for (const ev of this.state.events) {
+      ev.editorialState = 'candidate';
+      ev.editorialScore = null;
+      ev.latestComment = null;
+      ev.reviewCount = 0;
+      ev.isNew = true;
+      ev.isDeleted = false;
+      ev.notSeenInLatestRetrieval = false;
+      ev.suggestedScoreAdjustment = 0;
+      ev.groupApprovalRate = 0;
+      ev.manualPriority = index++;
+    }
+
+    for (const s of this.state.sources) {
+      s.healthStatus = 'healthy';
+      s.lastErrorMessage = null;
+    }
+
+    this.saveState();
+    return { count: this.state.events.length };
   }
 }
 
