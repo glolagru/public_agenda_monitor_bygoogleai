@@ -51,6 +51,7 @@ function parseDateFromTextOrPubDate(text: string, pubDateStr: string): { dateStr
 /**
  * Bewertet die Relevanz eines UN-Women-Eintrags nach journalistischem Nachrichtenwert
  * und der Wahrscheinlichkeit einer Berichterstattung in bundesweiten Hauptnachrichten (Tagesschau).
+ * Skala: 1 = Höchste Relevanz / Top-Thema, 5 = Niedrigste Relevanz / Hintergrund/Ratgeber.
  */
 export function evaluateUnWomenRelevance(
   title: string,
@@ -59,26 +60,26 @@ export function evaluateUnWomenRelevance(
 ): { score: number; rule: string; eventType: EventType } {
   const combined = `${title}\n${desc}\n${link}`.toLowerCase();
 
-  // 1. Stufe 5 (Sehr hoch / Kategorie 1: Top-Thema)
+  // 1. Stufe 1 (Höchste Relevanz / Top-Thema)
   // Tagesschau-Wahrscheinlichkeit: Sehr hoch (~85–95%) – Akute geopolitische Großkrisen & bewaffnete Konflikte
   if (
     /gaza|palestin|israel-hamas|security council resolution|zivilopfer/i.test(combined)
   ) {
     return {
-      score: 5,
-      rule: 'Tagesschau-Wahrscheinlichkeit sehr hoch (~85–95%): Akuter geopolitischer Großkonflikt mit UN-Zivilopferbilanz',
+      score: 1,
+      rule: 'Stufe 1 (Höchste Relevanz – Tagesschau ~85–95%): Akuter geopolitischer Großkonflikt mit UN-Zivilopferbilanz',
       eventType: 'report',
     };
   }
 
-  // 2. Stufe 4 (Hoch / Kategorie 2: Wichtiges Nachrichtenthema)
+  // 2. Stufe 2 (Hohe Relevanz / Wichtiges Nachrichtenthema)
   // Tagesschau-Wahrscheinlichkeit: Hoch (~60–75%) – UN-Generaldebatte der Staats-/Regierungschefs oder gravierende Rechtsakte
   if (
     /general assembly|unga\s*81|generaldebatte|ministerial meeting|high-level ministerial/i.test(combined)
   ) {
     return {
-      score: 4,
-      rule: 'Tagesschau-Wahrscheinlichkeit hoch (~65–75%): UN-Generalversammlung (UNGA) / hochrangiges Ministertreffen',
+      score: 2,
+      rule: 'Stufe 2 (Hohe Relevanz – Tagesschau ~65–75%): UN-Generalversammlung (UNGA) / hochrangiges Ministertreffen',
       eventType: 'panel',
     };
   }
@@ -86,20 +87,20 @@ export function evaluateUnWomenRelevance(
     /decree\s*no\.\s*\d+|taliban|de facto authorities|morality law|sittenpolizei/i.test(combined)
   ) {
     return {
-      score: 4,
-      rule: 'Tagesschau-Wahrscheinlichkeit hoch (~60–70%): Folgenschwerer völkerrechtlicher Rechtsakt / Unterdrückungserlass',
+      score: 2,
+      rule: 'Stufe 2 (Hohe Relevanz – Tagesschau ~60–70%): Folgenschwerer völkerrechtlicher Rechtsakt / Unterdrückungserlass',
       eventType: 'decision',
     };
   }
 
-  // 3. Stufe 3 (Mittel / Kategorie 3: Vermeldung / Tagesschau24 / dpa)
+  // 3. Stufe 3 (Mittlere Relevanz / Vermeldung / Tagesschau24 / dpa)
   // Tagesschau-Wahrscheinlichkeit: Mäßig (~25–35%) – Schwere Naturkatastrophen / UN-Eilappelle / offizielle Briefings
   if (
     /flood|earthquake|famine|humanitarian assistance|flash flood|emergency appeal|nothilfe|katastrophe/i.test(combined)
   ) {
     return {
       score: 3,
-      rule: 'Tagesschau-Wahrscheinlichkeit mäßig (~30%): Humanitärer UN-Eilappell / Flutkatastrophe mit Kurzmeldungspotenzial',
+      rule: 'Stufe 3 (Mittlere Relevanz – Tagesschau ~30%): Humanitärer UN-Eilappell / Flutkatastrophe mit Kurzmeldungspotenzial',
       eventType: 'report',
     };
   }
@@ -108,7 +109,7 @@ export function evaluateUnWomenRelevance(
   ) {
     return {
       score: 3,
-      rule: 'Tagesschau-Wahrscheinlichkeit mäßig (~25%): Offizielles UN-Pressebriefing zu akuten Krisenregionen',
+      rule: 'Stufe 3 (Mittlere Relevanz – Tagesschau ~25%): Offizielles UN-Pressebriefing zu akuten Krisenregionen',
       eventType: 'report',
     };
   }
@@ -118,32 +119,32 @@ export function evaluateUnWomenRelevance(
   ) {
     return {
       score: 3,
-      rule: 'Tagesschau-Wahrscheinlichkeit mäßig (~25%): Internationaler UN-Appell zu akuten Menschenrechtskrisen',
+      rule: 'Stufe 3 (Mittlere Relevanz – Tagesschau ~25%): Internationaler UN-Appell zu akuten Menschenrechtskrisen',
       eventType: 'report',
     };
   }
 
-  // 4. Stufe 1 (Gering / Kategorie 5: Erklärstücke, Ratgeber, Bildungsbeiträge, Sport-Listicles, Kampagnen)
+  // 4. Stufe 5 (Niedrigste Relevanz / Hintergrund, Ratgeber, Bildungsbeiträge, Kampagnen)
   // Tagesschau-Wahrscheinlichkeit: Praktisch 0% (< 2%) – Reine Hintergrundaufklärung ohne aktuellen Nachrichtenanlass
   if (
     /explainer|guide to|five things to know|how can|sustainable development goal|period poverty|workplaces free from|violence prevention a priority|sport/i.test(combined) ||
     link.includes('/explainer/')
   ) {
     return {
-      score: 1,
-      rule: 'Tagesschau-Wahrscheinlichkeit praktisch 0% (< 2%): Allgemeiner Hintergrund-Explainer / Ratgeber / Bildungsartikel',
+      score: 5,
+      rule: 'Stufe 5 (Niedrigste Relevanz – Tagesschau < 2%): Allgemeiner Hintergrund-Explainer / Ratgeber / Bildungsartikel',
       eventType: 'report',
     };
   }
 
-  // 5. Stufe 2 (Niedrig / Kategorie 4: Spezialinteresse / Fachpresse / Porträts)
+  // 5. Stufe 4 (Geringe Relevanz / Spezialinteresse / Fachpresse / Porträts)
   // Tagesschau-Wahrscheinlichkeit: Gering (~5–10%) – Quotenanalysen, regionale Programme, Einzelporträts, Gremienreden
   if (
     /political leadership|political participation|lgbtiq|anti-rights pushback|on the move|gender-daten/i.test(combined)
   ) {
     return {
-      score: 2,
-      rule: 'Tagesschau-Wahrscheinlichkeit gering (~10%): Fachpolitischer Bericht / Quotenanalyse ohne akuten Eilcharakter',
+      score: 4,
+      rule: 'Stufe 4 (Geringe Relevanz – Tagesschau ~10%): Fachpolitischer Bericht / Quotenanalyse ohne akuten Eilcharakter',
       eventType: 'report',
     };
   }
@@ -151,8 +152,8 @@ export function evaluateUnWomenRelevance(
     /speech.*executive board|opening of the second regular session|closing of the second regular/i.test(combined)
   ) {
     return {
-      score: 2,
-      rule: 'Tagesschau-Wahrscheinlichkeit sehr gering (~5%): Interne Gremienrede vor UN-Exekutivrat',
+      score: 4,
+      rule: 'Stufe 4 (Geringe Relevanz – Tagesschau ~5%): Interne Gremienrede vor UN-Exekutivrat',
       eventType: 'panel',
     };
   }
@@ -160,15 +161,15 @@ export function evaluateUnWomenRelevance(
     /feature-story|fatherhood|female genital mutilation|fgm|grassroots/i.test(combined)
   ) {
     return {
-      score: 2,
-      rule: 'Tagesschau-Wahrscheinlichkeit sehr gering (~5%): Regionale Porträt- und Feature-Story für Spezialformate',
+      score: 4,
+      rule: 'Stufe 4 (Geringe Relevanz – Tagesschau ~5%): Regionale Porträt- und Feature-Story für Spezialformate',
       eventType: 'report',
     };
   }
 
   return {
-    score: 2,
-    rule: 'Tagesschau-Wahrscheinlichkeit gering (~5%): Allgemeiner Informationsbeitrag von UN Women',
+    score: 4,
+    rule: 'Stufe 4 (Geringe Relevanz – Tagesschau ~5%): Allgemeiner Informationsbeitrag von UN Women',
     eventType: 'report',
   };
 }

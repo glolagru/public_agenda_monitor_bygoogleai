@@ -179,7 +179,7 @@ export const EditorialAgenda: React.FC<EditorialAgendaProps> = ({ events }) => {
                             )}
                             {event.editorialScore && (
                               <span className="text-[11px] font-bold text-[#182B33] bg-[#E8F4EC] text-[#28734F] border border-[#C5E3CE] px-2 py-0.5 rounded">
-                                Relevanz: {event.editorialScore} / 5
+                                Relevanz: Stufe {event.editorialScore}
                               </span>
                             )}
                             {isWarning && (

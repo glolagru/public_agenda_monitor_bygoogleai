@@ -155,10 +155,11 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
     }
 
     if (sortField === 'relevance') {
-      const scoreA = a.editorialScore ?? a.systemRelevanceScore ?? 0;
-      const scoreB = b.editorialScore ?? b.systemRelevanceScore ?? 0;
+      const scoreA = a.editorialScore ?? a.suggestedScore ?? 3;
+      const scoreB = b.editorialScore ?? b.suggestedScore ?? 3;
       if (scoreA !== scoreB) {
-        return sortDirection === 'desc' ? scoreB - scoreA : scoreA - scoreB;
+        // 1 ist höchste Relevanz, 5 niedrigste: asc = 1 zuerst (höchste), desc = 5 zuerst (niedrigste)
+        return sortDirection === 'asc' ? scoreA - scoreB : scoreB - scoreA;
       }
       // Nachrangig: immer Datum, dann Zeit
       return compareDateTime(a, b, true);
@@ -189,7 +190,7 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
     } else {
       setSortField(field);
       if (field === 'relevance') {
-        setSortDirection('desc'); // High relevance first
+        setSortDirection('asc'); // Stufe 1 (Höchste Relevanz) zuerst
       } else {
         setSortDirection('asc');
       }
@@ -336,7 +337,7 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
           <div className="text-[11px] font-medium text-[#1F6075]">
             {sortField === 'status' && 'Sortiert: Status → Datum'}
             {sortField === 'date' && `Sortiert: Datum (${sortDirection === 'asc' ? 'aufst.' : 'abst.'})`}
-            {sortField === 'relevance' && `Sortiert: Relevanz (${sortDirection === 'desc' ? 'höchste zuerst' : 'niedrigste zuerst'}) → Datum`}
+            {sortField === 'relevance' && `Sortiert: Relevanz (${sortDirection === 'asc' ? 'höchste zuerst (1→5)' : 'niedrigste zuerst (5→1)'}) → Datum`}
             {sortField === 'source' && `Sortiert: Quelle (${sortDirection === 'asc' ? 'A-Z' : 'Z-A'}) → Datum`}
             {sortField === 'manual' && 'Manuelle Reihung aktiv'}
           </div>
@@ -431,7 +432,7 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                   ? 'Alle Relevanzen (1–5)'
                   : selectedRelevances.length === 0
                   ? 'Keine Relevanz'
-                  : `Relevanz: ${[...selectedRelevances].sort((a, b) => b - a).join(', ')}`}
+                  : `Relevanz: ${[...selectedRelevances].sort((a, b) => a - b).join(', ')}`}
               </span>
               <ChevronDown
                 className={`w-3 h-3 transition-transform ${isRelevanceDropdownOpen ? 'rotate-180' : ''}`}
@@ -441,7 +442,7 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
             {isRelevanceDropdownOpen && (
               <div className="absolute left-0 mt-1.5 w-56 bg-white border border-[#D6E1E5] rounded-xl shadow-lg p-2.5 z-40 text-xs animate-in fade-in-50 duration-150">
                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#E8EFF1]">
-                  <span className="font-bold text-[#182B33]">Relevanzen</span>
+                  <span className="font-bold text-[#182B33]">Relevanzen (1–5)</span>
                   <div className="flex items-center gap-2 text-[11px]">
                     <button
                       type="button"
@@ -461,7 +462,7 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                   </div>
                 </div>
                 <div className="space-y-1">
-                  {[5, 4, 3, 2, 1].map((score) => {
+                  {[1, 2, 3, 4, 5].map((score) => {
                     const isChecked = selectedRelevances.includes(score);
                     const count = events.filter((e) => {
                       const s = Math.min(5, Math.max(1, Math.round(e.editorialScore ?? e.suggestedScore ?? 3)));
@@ -485,11 +486,11 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                         </div>
                         <div className="flex items-center gap-1.5 text-[11px]">
                           <span className="text-[#5A6D75]">
-                            {score === 5 && 'Sehr hoch'}
-                            {score === 4 && 'Hoch'}
+                            {score === 1 && 'Höchste (Top)'}
+                            {score === 2 && 'Hoch'}
                             {score === 3 && 'Mittel'}
-                            {score === 2 && 'Niedrig'}
-                            {score === 1 && 'Gering'}
+                            {score === 4 && 'Niedrig'}
+                            {score === 5 && 'Gering'}
                           </span>
                           <span className="text-[10px] text-[#7B8E96] font-mono">({count})</span>
                         </div>
@@ -710,13 +711,13 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                     <td className={`px-3 py-2.5 align-top ${rowBg}`}>
                       <div className="flex items-center gap-1.5 font-bold">
                         <span className="text-[13px] text-[#182B33]">
-                          {event.editorialScore ?? event.suggestedScore} / 5
+                          Stufe {event.editorialScore ?? event.suggestedScore}
                         </span>
                         {event.suggestedScoreAdjustment !== 0 && (
                           <span
                             title={`Lernschleife: ${event.suggestedScoreAdjustment > 0 ? '+' : ''}${
                               event.suggestedScoreAdjustment
-                            } basierend auf früheren Prüfungen (${event.groupApprovalRate}% Freigabequote)`}
+                            } Stufen basierend auf früheren Prüfungen (${event.groupApprovalRate}% Freigabequote)`}
                             className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded text-[10px] font-semibold bg-[#1F6075] text-white"
                           >
                             <Sparkles className="w-2.5 h-2.5" />

@@ -225,7 +225,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
               <div className="text-right">
                 <span className="text-xs text-[#5A6D75]">Vorschlag:</span>
                 <div className="font-bold text-sm text-[#1F6075]">
-                  {event.suggestedScore} / 5
+                  Stufe {event.suggestedScore}
                 </div>
               </div>
             </div>
@@ -237,7 +237,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                   Lernschleifen-Korrektur:{' '}
                   <strong>
                     {event.suggestedScoreAdjustment > 0 ? '+' : ''}
-                    {event.suggestedScoreAdjustment} Punkte
+                    {event.suggestedScoreAdjustment} Stufen
                   </strong>{' '}
                   aus früheren redaktionellen Prüfungen dieser Kategorie.
                 </span>
@@ -249,9 +249,14 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
 
             {/* 1-5 Score selector buttons */}
             <div>
-              <label className="block font-semibold text-[#182B33] mb-1.5">
-                Redaktionelle Relevanz festlegen:
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block font-semibold text-[#182B33]">
+                  Redaktionelle Relevanz festlegen:
+                </label>
+                <span className="text-[11px] text-[#5A6D75]">
+                  (1 = Höchste, 5 = Niedrigste)
+                </span>
+              </div>
               <div className="grid grid-cols-5 gap-2">
                 {[1, 2, 3, 4, 5].map((score) => (
                   <button
@@ -264,15 +269,17 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                         : 'bg-white text-[#5A6D75] border-[#D6E1E5] hover:border-[#1F6075]'
                     }`}
                   >
-                    <div className="text-sm">{score}</div>
+                    <div className="text-sm">Stufe {score}</div>
                     <div className="text-[10px] font-normal truncate">
                       {score === 1
-                        ? 'Gering'
+                        ? 'Höchste'
+                        : score === 2
+                        ? 'Hoch'
                         : score === 3
                         ? 'Mittel'
-                        : score === 5
-                        ? 'Top-Thema'
-                        : ''}
+                        : score === 4
+                        ? 'Niedrig'
+                        : 'Gering'}
                     </div>
                   </button>
                 ))}
@@ -315,7 +322,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                     </div>
                     {rev.editorialScore && (
                       <div className="mt-0.5 text-[#1F6075] font-semibold">
-                        Relevanzwert: {rev.editorialScore} / 5
+                        Relevanz: Stufe {rev.editorialScore}
                       </div>
                     )}
                     {rev.comment && (

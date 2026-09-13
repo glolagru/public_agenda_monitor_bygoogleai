@@ -49,7 +49,7 @@ export interface NormalizedEvent {
   location: string | null;
   originalText: string;
   editorialState: EditorialState;
-  suggestedScore: number; // 1-5
+  suggestedScore: number; // 1 (höchste) bis 5 (niedrigste)
   suggestedScoreRule: string;
   suggestedScoreAdjustment: number;
   groupApprovalRate: number;

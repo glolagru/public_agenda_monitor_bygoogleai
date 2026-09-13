@@ -263,11 +263,11 @@ export function parseBverwgXml(
       location: 'Leipzig, Bundesverwaltungsgericht',
       originalText: `${title}\n\n${rawDesc}`.trim(),
       editorialState: 'candidate',
-      suggestedScore: eventType === 'judgment' ? 4 : 3,
+      suggestedScore: eventType === 'judgment' ? 2 : 3,
       suggestedScoreRule:
         eventType === 'judgment'
-          ? 'Urteilsverkündung des Bundesverwaltungsgerichts mit Leitentscheidungscharakter'
-          : 'Mündliche Verhandlung vor dem Bundesverwaltungsgericht',
+          ? 'Stufe 2 (Hohe Relevanz): Urteilsverkündung des Bundesverwaltungsgerichts mit Leitentscheidungscharakter'
+          : 'Stufe 3 (Mittlere Relevanz): Mündliche Verhandlung vor dem Bundesverwaltungsgericht',
       suggestedScoreAdjustment: 0,
       groupApprovalRate: 0,
       editorialScore: null,

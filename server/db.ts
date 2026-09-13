@@ -48,7 +48,7 @@ const DEFAULT_SOURCES: SourceDefinition[] = [
     primaryUrl: 'https://www.bverwg.de/rss/termine.rss',
     qualificationRule: 'Verhandlungs- und Urteilstermine der Senate',
     defaultTopic: 'Verwaltungsrecht',
-    defaultScore: 4,
+    defaultScore: 2,
     healthStatus: 'healthy',
     lastRetrievalAt: null,
     lastErrorMessage: null,
@@ -65,7 +65,7 @@ const DEFAULT_SOURCES: SourceDefinition[] = [
       'https://www.bundespraesident.de/SiteGlobals/Functions/RSSFeed/DE/RSSNewsfeed/Termine/RSSNewsfeed.xml?nn=127360',
     qualificationRule: 'Öffentliche Termine des Bundespräsidenten laut Terminkalender/Feed',
     defaultTopic: 'Staatsoberhaupt & Repräsentation',
-    defaultScore: 4,
+    defaultScore: 2,
     healthStatus: 'healthy',
     lastRetrievalAt: null,
     lastErrorMessage: null,
@@ -80,7 +80,7 @@ const DEFAULT_SOURCES: SourceDefinition[] = [
     primaryUrl: 'https://www.unwomen.org/en/feeds/news',
     qualificationRule: 'High-Level Panels, Ministertreffen zu Gleichstellung & Krisenberichte',
     defaultTopic: 'Gleichstellung & Menschenrechte',
-    defaultScore: 2,
+    defaultScore: 4,
     healthStatus: 'healthy',
     lastRetrievalAt: null,
     lastErrorMessage: null,
@@ -129,13 +129,22 @@ class DatabaseService {
               if (ev.sourceUrl?.includes('/feeds/')) {
                 ev.sourceUrl = 'https://www.unwomen.org/en/news-stories';
               }
-              // Differentiated relevance evaluation based on Tagesschau reporting likelihood
+              // Differentiated relevance evaluation based on Tagesschau reporting likelihood (1 = highest, 5 = lowest)
               const evaluation = evaluateUnWomenRelevance(ev.title, ev.originalText || '', ev.sourceUrl || '');
               ev.suggestedScore = evaluation.score;
               ev.suggestedScoreRule = evaluation.rule;
               if (evaluation.eventType) {
                 ev.eventType = evaluation.eventType;
               }
+            } else if (ev.sourceKey === 'bundespraesident') {
+              ev.suggestedScore = 2;
+              ev.suggestedScoreRule = 'Stufe 2 (Hohe Relevanz): Öffentlicher offizieller Termin des Bundespräsidenten mit bundespolitischer Außenwirkung';
+            } else if (ev.sourceKey === 'bverwg') {
+              ev.suggestedScore = ev.eventType === 'judgment' ? 2 : 3;
+              ev.suggestedScoreRule =
+                ev.eventType === 'judgment'
+                  ? 'Stufe 2 (Hohe Relevanz): Urteilsverkündung des Bundesverwaltungsgerichts mit Leitentscheidungscharakter'
+                  : 'Stufe 3 (Mittlere Relevanz): Mündliche Verhandlung vor dem Bundesverwaltungsgericht';
             }
           }
 
@@ -262,7 +271,7 @@ class DatabaseService {
       approvedCount,
       totalReviewed: matchingReviewed.length,
       approvalRate,
-      explanation: `Lernschleife aktiv: ${roundedAdjustment >= 0 ? '+' : ''}${roundedAdjustment} Score-Anpassung basierend auf ${matchingReviewed.length} redaktionellen Prüfungen (${approvalRate}% Freigabequote).`,
+      explanation: `Lernschleife aktiv: ${roundedAdjustment >= 0 ? '+' : ''}${roundedAdjustment} Stufen-Anpassung basierend auf ${matchingReviewed.length} redaktionellen Prüfungen (${approvalRate}% Freigabequote).`,
     };
   }
 
@@ -594,6 +603,15 @@ class DatabaseService {
         if (evaluation.eventType) {
           ev.eventType = evaluation.eventType;
         }
+      } else if (ev.sourceKey === 'bundespraesident') {
+        ev.suggestedScore = 2;
+        ev.suggestedScoreRule = 'Stufe 2 (Hohe Relevanz): Öffentlicher offizieller Termin des Bundespräsidenten mit bundespolitischer Außenwirkung';
+      } else if (ev.sourceKey === 'bverwg') {
+        ev.suggestedScore = ev.eventType === 'judgment' ? 2 : 3;
+        ev.suggestedScoreRule =
+          ev.eventType === 'judgment'
+            ? 'Stufe 2 (Hohe Relevanz): Urteilsverkündung des Bundesverwaltungsgerichts mit Leitentscheidungscharakter'
+            : 'Stufe 3 (Mittlere Relevanz): Mündliche Verhandlung vor dem Bundesverwaltungsgericht';
       }
     }
 
