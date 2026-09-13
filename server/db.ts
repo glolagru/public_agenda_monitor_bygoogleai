@@ -9,6 +9,7 @@ import {
   SourceDefinition,
   SourceKey,
 } from '../src/types';
+import { evaluateUnWomenRelevance } from '../src/adapters/un_women';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const DATA_FILE = path.join(DATA_DIR, 'agenda_monitor.json');
@@ -77,9 +78,9 @@ const DEFAULT_SOURCES: SourceDefinition[] = [
     category: 'Internationale Organisationen',
     publicWebUrl: 'https://www.unwomen.org/en/news-stories',
     primaryUrl: 'https://www.unwomen.org/en/feeds/news',
-    qualificationRule: 'High-Level Panels, Ministertreffen zu Gleichstellung & Gewaltprävention',
+    qualificationRule: 'High-Level Panels, Ministertreffen zu Gleichstellung & Krisenberichte',
     defaultTopic: 'Gleichstellung & Menschenrechte',
-    defaultScore: 4,
+    defaultScore: 2,
     healthStatus: 'healthy',
     lastRetrievalAt: null,
     lastErrorMessage: null,
@@ -124,8 +125,17 @@ class DatabaseService {
               ev.sourceUrl = 'https://www.bverwg.de/aktuelles/verhandlungstermine';
             } else if (ev.sourceKey === 'bundespraesident' && (ev.sourceUrl?.includes('RSSNewsfeed') || ev.sourceUrl?.includes('rss-feeds'))) {
               ev.sourceUrl = 'https://www.bundespraesident.de/DE/termine/termine-node.html';
-            } else if (ev.sourceKey === 'un_women_news' && ev.sourceUrl?.includes('/feeds/')) {
-              ev.sourceUrl = 'https://www.unwomen.org/en/news-stories';
+            } else if (ev.sourceKey === 'un_women_news') {
+              if (ev.sourceUrl?.includes('/feeds/')) {
+                ev.sourceUrl = 'https://www.unwomen.org/en/news-stories';
+              }
+              // Differentiated relevance evaluation based on Tagesschau reporting likelihood
+              const evaluation = evaluateUnWomenRelevance(ev.title, ev.originalText || '', ev.sourceUrl || '');
+              ev.suggestedScore = evaluation.score;
+              ev.suggestedScoreRule = evaluation.rule;
+              if (evaluation.eventType) {
+                ev.eventType = evaluation.eventType;
+              }
             }
           }
 
@@ -576,6 +586,15 @@ class DatabaseService {
       ev.suggestedScoreAdjustment = 0;
       ev.groupApprovalRate = 0;
       ev.manualPriority = index++;
+
+      if (ev.sourceKey === 'un_women_news') {
+        const evaluation = evaluateUnWomenRelevance(ev.title, ev.originalText || '', ev.sourceUrl || '');
+        ev.suggestedScore = evaluation.score;
+        ev.suggestedScoreRule = evaluation.rule;
+        if (evaluation.eventType) {
+          ev.eventType = evaluation.eventType;
+        }
+      }
     }
 
     for (const s of this.state.sources) {

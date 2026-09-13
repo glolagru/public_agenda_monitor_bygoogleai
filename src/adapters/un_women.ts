@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { XMLParser } from 'fast-xml-parser';
-import { NormalizedEvent, SourceKey } from '../types';
+import { EventType, NormalizedEvent, SourceKey } from '../types';
 
 export const UN_WOMEN_NEWS_URL = 'https://www.unwomen.org/en/rss-feeds/news';
 
@@ -48,6 +48,131 @@ function parseDateFromTextOrPubDate(text: string, pubDateStr: string): { dateStr
   return { dateStr, timeStr };
 }
 
+/**
+ * Bewertet die Relevanz eines UN-Women-Eintrags nach journalistischem Nachrichtenwert
+ * und der Wahrscheinlichkeit einer Berichterstattung in bundesweiten Hauptnachrichten (Tagesschau).
+ */
+export function evaluateUnWomenRelevance(
+  title: string,
+  desc: string,
+  link: string
+): { score: number; rule: string; eventType: EventType } {
+  const combined = `${title}\n${desc}\n${link}`.toLowerCase();
+
+  // 1. Stufe 5 (Sehr hoch / Kategorie 1: Top-Thema)
+  // Tagesschau-Wahrscheinlichkeit: Sehr hoch (~85–95%) – Akute geopolitische Großkrisen & bewaffnete Konflikte
+  if (
+    /gaza|palestin|israel-hamas|security council resolution|zivilopfer/i.test(combined)
+  ) {
+    return {
+      score: 5,
+      rule: 'Tagesschau-Wahrscheinlichkeit sehr hoch (~85–95%): Akuter geopolitischer Großkonflikt mit UN-Zivilopferbilanz',
+      eventType: 'report',
+    };
+  }
+
+  // 2. Stufe 4 (Hoch / Kategorie 2: Wichtiges Nachrichtenthema)
+  // Tagesschau-Wahrscheinlichkeit: Hoch (~60–75%) – UN-Generaldebatte der Staats-/Regierungschefs oder gravierende Rechtsakte
+  if (
+    /general assembly|unga\s*81|generaldebatte|ministerial meeting|high-level ministerial/i.test(combined)
+  ) {
+    return {
+      score: 4,
+      rule: 'Tagesschau-Wahrscheinlichkeit hoch (~65–75%): UN-Generalversammlung (UNGA) / hochrangiges Ministertreffen',
+      eventType: 'panel',
+    };
+  }
+  if (
+    /decree\s*no\.\s*\d+|taliban|de facto authorities|morality law|sittenpolizei/i.test(combined)
+  ) {
+    return {
+      score: 4,
+      rule: 'Tagesschau-Wahrscheinlichkeit hoch (~60–70%): Folgenschwerer völkerrechtlicher Rechtsakt / Unterdrückungserlass',
+      eventType: 'decision',
+    };
+  }
+
+  // 3. Stufe 3 (Mittel / Kategorie 3: Vermeldung / Tagesschau24 / dpa)
+  // Tagesschau-Wahrscheinlichkeit: Mäßig (~25–35%) – Schwere Naturkatastrophen / UN-Eilappelle / offizielle Briefings
+  if (
+    /flood|earthquake|famine|humanitarian assistance|flash flood|emergency appeal|nothilfe|katastrophe/i.test(combined)
+  ) {
+    return {
+      score: 3,
+      rule: 'Tagesschau-Wahrscheinlichkeit mäßig (~30%): Humanitärer UN-Eilappell / Flutkatastrophe mit Kurzmeldungspotenzial',
+      eventType: 'report',
+    };
+  }
+  if (
+    /press briefing at the united nations|special representative.*briefing|press-briefing/i.test(combined)
+  ) {
+    return {
+      score: 3,
+      rule: 'Tagesschau-Wahrscheinlichkeit mäßig (~25%): Offizielles UN-Pressebriefing zu akuten Krisenregionen',
+      eventType: 'report',
+    };
+  }
+  if (
+    /urges immediate global action|afghanistan/i.test(combined) &&
+    !/feature-story|explainer/i.test(link)
+  ) {
+    return {
+      score: 3,
+      rule: 'Tagesschau-Wahrscheinlichkeit mäßig (~25%): Internationaler UN-Appell zu akuten Menschenrechtskrisen',
+      eventType: 'report',
+    };
+  }
+
+  // 4. Stufe 1 (Gering / Kategorie 5: Erklärstücke, Ratgeber, Bildungsbeiträge, Sport-Listicles, Kampagnen)
+  // Tagesschau-Wahrscheinlichkeit: Praktisch 0% (< 2%) – Reine Hintergrundaufklärung ohne aktuellen Nachrichtenanlass
+  if (
+    /explainer|guide to|five things to know|how can|sustainable development goal|period poverty|workplaces free from|violence prevention a priority|sport/i.test(combined) ||
+    link.includes('/explainer/')
+  ) {
+    return {
+      score: 1,
+      rule: 'Tagesschau-Wahrscheinlichkeit praktisch 0% (< 2%): Allgemeiner Hintergrund-Explainer / Ratgeber / Bildungsartikel',
+      eventType: 'report',
+    };
+  }
+
+  // 5. Stufe 2 (Niedrig / Kategorie 4: Spezialinteresse / Fachpresse / Porträts)
+  // Tagesschau-Wahrscheinlichkeit: Gering (~5–10%) – Quotenanalysen, regionale Programme, Einzelporträts, Gremienreden
+  if (
+    /political leadership|political participation|lgbtiq|anti-rights pushback|on the move|gender-daten/i.test(combined)
+  ) {
+    return {
+      score: 2,
+      rule: 'Tagesschau-Wahrscheinlichkeit gering (~10%): Fachpolitischer Bericht / Quotenanalyse ohne akuten Eilcharakter',
+      eventType: 'report',
+    };
+  }
+  if (
+    /speech.*executive board|opening of the second regular session|closing of the second regular/i.test(combined)
+  ) {
+    return {
+      score: 2,
+      rule: 'Tagesschau-Wahrscheinlichkeit sehr gering (~5%): Interne Gremienrede vor UN-Exekutivrat',
+      eventType: 'panel',
+    };
+  }
+  if (
+    /feature-story|fatherhood|female genital mutilation|fgm|grassroots/i.test(combined)
+  ) {
+    return {
+      score: 2,
+      rule: 'Tagesschau-Wahrscheinlichkeit sehr gering (~5%): Regionale Porträt- und Feature-Story für Spezialformate',
+      eventType: 'report',
+    };
+  }
+
+  return {
+    score: 2,
+    rule: 'Tagesschau-Wahrscheinlichkeit gering (~5%): Allgemeiner Informationsbeitrag von UN Women',
+    eventType: 'report',
+  };
+}
+
 export function parseUnWomenXml(
   xml: string,
   channel: 'news' = 'news',
@@ -86,12 +211,16 @@ export function parseUnWomenXml(
     if (!isQualifying) continue;
 
     const { dateStr, timeStr } = parseDateFromTextOrPubDate(combined, pubDate);
-    const eventType = 'panel';
+    const evaluation = evaluateUnWomenRelevance(title, desc, link);
+    const eventType = evaluation.eventType;
 
     let topic = 'Gleichstellung & Frauenrechte';
     if (/care|unpaid/i.test(combined)) topic = 'Care-Arbeit & Wirtschaft';
     else if (/violence|abuse|digital/i.test(combined)) topic = 'Schutz vor Gewalt';
     else if (/snapshot|data|indicators|sdg/i.test(combined)) topic = 'Gender-Daten & SDGs';
+    else if (/gaza|palestin|israel/i.test(combined)) topic = 'Nahost & Zivilschutz';
+    else if (/afghanistan|taliban/i.test(combined)) topic = 'Menschenrechte Afghanistan';
+    else if (/flood|katastrophe/i.test(combined)) topic = 'Katastrophenhilfe & Nothilfe';
 
     events.push({
       sourceKey,
@@ -109,8 +238,8 @@ export function parseUnWomenXml(
       location: /Geneva/i.test(combined) ? 'Genf, Schweiz' : 'New York, UN Headquarters',
       originalText: `${title}\n\n${desc}`.trim(),
       editorialState: 'candidate',
-      suggestedScore: 4,
-      suggestedScoreRule: 'High-Level Panel / Ministerkonferenz von UN Women auf UN-Ebene',
+      suggestedScore: evaluation.score,
+      suggestedScoreRule: evaluation.rule,
       suggestedScoreAdjustment: 0,
       groupApprovalRate: 0,
       editorialScore: null,
