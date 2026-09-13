@@ -4,7 +4,6 @@ import { XMLParser } from 'fast-xml-parser';
 import { NormalizedEvent, SourceKey } from '../types';
 
 export const UN_WOMEN_NEWS_URL = 'https://www.unwomen.org/en/feeds/news';
-export const UN_WOMEN_PUBLICATIONS_URL = 'https://www.unwomen.org/en/feeds/publications';
 
 function decodeXml(value: string): string {
   return value
@@ -51,7 +50,7 @@ function parseDateFromTextOrPubDate(text: string, pubDateStr: string): { dateStr
 
 export function parseUnWomenXml(
   xml: string,
-  channel: 'news' | 'publications',
+  channel: 'news' = 'news',
   isFixture = false
 ): Omit<NormalizedEvent, 'id' | 'sourceId'>[] {
   const parser = new XMLParser({
@@ -65,8 +64,8 @@ export function parseUnWomenXml(
 
   const rawList = Array.isArray(items) ? items : [items];
   const events: Omit<NormalizedEvent, 'id' | 'sourceId'>[] = [];
-  const sourceKey: SourceKey = channel === 'news' ? 'un_women_news' : 'un_women_publications';
-  const sourceName = channel === 'news' ? 'UN Women (News & Panels)' : 'UN Women (Publikationen)';
+  const sourceKey: SourceKey = 'un_women_news';
+  const sourceName = 'UN Women (News & Panels)';
 
   for (const item of rawList) {
     const title = typeof item.title === 'string' ? decodeXml(item.title) : '';
@@ -87,7 +86,7 @@ export function parseUnWomenXml(
     if (!isQualifying) continue;
 
     const { dateStr, timeStr } = parseDateFromTextOrPubDate(combined, pubDate);
-    const eventType = channel === 'publications' ? 'report' : 'panel';
+    const eventType = 'panel';
 
     let topic = 'Gleichstellung & Frauenrechte';
     if (/care|unpaid/i.test(combined)) topic = 'Care-Arbeit & Wirtschaft';
@@ -111,10 +110,7 @@ export function parseUnWomenXml(
       originalText: `${title}\n\n${desc}`.trim(),
       editorialState: 'candidate',
       suggestedScore: 4,
-      suggestedScoreRule:
-        channel === 'publications'
-          ? 'Globaler Leitbericht von UN Women mit quantitativen Indikatoren'
-          : 'High-Level Panel / Ministerkonferenz von UN Women auf UN-Ebene',
+      suggestedScoreRule: 'High-Level Panel / Ministerkonferenz von UN Women auf UN-Ebene',
       suggestedScoreAdjustment: 0,
       groupApprovalRate: 0,
       editorialScore: null,
@@ -132,10 +128,9 @@ export function parseUnWomenXml(
   return events;
 }
 
-export async function fetchUnWomenEvents(channel: 'news' | 'publications', preferFixture = false) {
-  const targetUrl = channel === 'news' ? UN_WOMEN_NEWS_URL : UN_WOMEN_PUBLICATIONS_URL;
-  const fixtureFile =
-    channel === 'news' ? 'fixtures/unwomen-news.xml' : 'fixtures/unwomen-publications.xml';
+export async function fetchUnWomenEvents(channel: 'news' = 'news', preferFixture = false) {
+  const targetUrl = UN_WOMEN_NEWS_URL;
+  const fixtureFile = 'fixtures/unwomen-news.xml';
 
   if (preferFixture) {
     const fixturePath = path.resolve(process.cwd(), fixtureFile);

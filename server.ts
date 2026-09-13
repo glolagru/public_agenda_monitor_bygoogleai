@@ -1,17 +1,13 @@
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
-import { db } from './server/db';
+import { db, getDateWindow } from './server/db';
 import {
   initializeDatabaseWithSeed,
   retrieveAllSources,
   retrieveSource,
 } from './server/retrieval';
 import { SourceKey } from './src/types';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3000;
@@ -72,27 +68,18 @@ app.get('/api/agenda', (req, res) => {
   try {
     const allEvents = db.getEvents();
     const approved = allEvents.filter((e) => e.editorialState === 'approved');
+    const { minDate, maxDate } = getDateWindow();
 
-    // 14 calendar days window: today through today + 13 days
-    const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
-    const endDate = new Date(now);
-    endDate.setDate(endDate.getDate() + 14);
-    const endDateStr = endDate.toISOString().slice(0, 10);
-
-    // In demo mode or if dates are slightly offset, include approved events in range
+    // 14 calendar days window: today through today + 14 days
     const inWindow = approved.filter((e) => {
-      return e.sourceDate >= todayStr && e.sourceDate <= endDateStr;
+      return e.sourceDate >= minDate && e.sourceDate <= maxDate;
     });
 
-    // If dates in demo dataset are in the future or past, also provide approved events so agenda is never empty in demo
-    const finalAgenda = inWindow.length > 0 ? inWindow : approved;
-
     res.json({
-      agenda: finalAgenda,
-      windowStart: todayStr,
-      windowEnd: endDateStr,
-      totalApproved: approved.length,
+      agenda: inWindow,
+      windowStart: minDate,
+      windowEnd: maxDate,
+      totalApproved: inWindow.length,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

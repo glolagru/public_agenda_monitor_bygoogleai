@@ -21,6 +21,22 @@ export interface DatabaseState {
   lastSpecialistReviewAt: string | null;
 }
 
+export function getDateWindow(): { minDate: string; maxDate: string } {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Berlin',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const todayStr = formatter.format(new Date());
+
+  const maxDateObj = new Date();
+  maxDateObj.setDate(maxDateObj.getDate() + 14);
+  const maxDateStr = formatter.format(maxDateObj);
+
+  return { minDate: todayStr, maxDate: maxDateStr };
+}
+
 const DEFAULT_SOURCES: SourceDefinition[] = [
   {
     id: 'src-bverwg',
@@ -69,38 +85,6 @@ const DEFAULT_SOURCES: SourceDefinition[] = [
     lastErrorMessage: null,
     eventsCount: 0,
   },
-  {
-    id: 'src-un-women-publications',
-    key: 'un_women_publications',
-    name: 'UN Women (Publikationen)',
-    category: 'Internationale Organisationen',
-    publicWebUrl: 'https://www.unwomen.org/en/digital-library/publications',
-    primaryUrl: 'https://www.unwomen.org/en/feeds/publications',
-    qualificationRule: 'Internationale Berichte & quantitative Gender-Datensätze',
-    defaultTopic: 'Globale Gender-Daten',
-    defaultScore: 3,
-    healthStatus: 'healthy',
-    lastRetrievalAt: null,
-    lastErrorMessage: null,
-    eventsCount: 0,
-  },
-  {
-    id: 'src-bverfg',
-    key: 'bverfg',
-    name: 'Bundesverfassungsgericht',
-    category: 'Gerichte',
-    publicWebUrl:
-      'https://www.bundesverfassungsgericht.de/DE/Aktuelles/TermineWochenausblick/termine-Wochenausblick_node.html',
-    primaryUrl:
-      'https://www.bundesverfassungsgericht.de/DE/Aktuelles/TermineWochenausblick/termine-Wochenausblick_node.html',
-    qualificationRule: 'Mündliche Verhandlungen und Urteilsverkündungen im Wochenausblick',
-    defaultTopic: 'Verfassungsrecht',
-    defaultScore: 5,
-    healthStatus: 'healthy',
-    lastRetrievalAt: null,
-    lastErrorMessage: null,
-    eventsCount: 0,
-  },
 ];
 
 class DatabaseService {
@@ -120,14 +104,16 @@ class DatabaseService {
         const raw = fs.readFileSync(DATA_FILE, 'utf-8');
         const parsed = JSON.parse(raw);
         if (parsed.sources && parsed.events && parsed.reviews) {
-          // Ensure all sources have publicWebUrl
-          parsed.sources = parsed.sources.map((s: SourceDefinition) => {
-            const def = DEFAULT_SOURCES.find((d) => d.key === s.key);
-            return {
-              ...s,
-              publicWebUrl: s.publicWebUrl || def?.publicWebUrl || s.primaryUrl,
-            };
-          });
+          // Ensure all sources have publicWebUrl and exclude deleted sources (bverfg, un_women_publications)
+          parsed.sources = parsed.sources
+            .filter((s: SourceDefinition) => (s.key as string) !== 'bverfg' && (s.key as string) !== 'un_women_publications')
+            .map((s: SourceDefinition) => {
+              const def = DEFAULT_SOURCES.find((d) => d.key === s.key);
+              return {
+                ...s,
+                publicWebUrl: s.publicWebUrl || def?.publicWebUrl || s.primaryUrl,
+              };
+            });
 
           // Ensure all events have clean, reachable public web URLs
           for (const ev of parsed.events) {
@@ -137,10 +123,18 @@ class DatabaseService {
               ev.sourceUrl = 'https://www.bundespraesident.de/DE/termine/termine-node.html';
             } else if (ev.sourceKey === 'un_women_news' && ev.sourceUrl?.includes('/feeds/')) {
               ev.sourceUrl = 'https://www.unwomen.org/en/news-stories';
-            } else if (ev.sourceKey === 'un_women_publications' && ev.sourceUrl?.includes('/feeds/')) {
-              ev.sourceUrl = 'https://www.unwomen.org/en/digital-library/publications';
             }
           }
+
+          // Strict 14-day window: only retain events taking place from today until 2 weeks ahead (no past events, active sources only)
+          const { minDate, maxDate } = getDateWindow();
+          parsed.events = parsed.events.filter(
+            (ev: NormalizedEvent) =>
+              (ev.sourceKey as string) !== 'bverfg' &&
+              (ev.sourceKey as string) !== 'un_women_publications' &&
+              ev.sourceDate >= minDate &&
+              ev.sourceDate <= maxDate
+          );
 
           return parsed;
         }
@@ -171,9 +165,25 @@ class DatabaseService {
     }
   }
 
+  public pruneExpiredEvents(): boolean {
+    const { minDate, maxDate } = getDateWindow();
+    const originalCount = this.state.events.length;
+    this.state.events = this.state.events.filter(
+      (ev) => ev.sourceDate >= minDate && ev.sourceDate <= maxDate
+    );
+    if (this.state.events.length !== originalCount) {
+      this.saveState();
+      return true;
+    }
+    return false;
+  }
+
   public getSources(): SourceDefinition[] {
+    const { minDate, maxDate } = getDateWindow();
     return this.state.sources.map((s) => {
-      const count = this.state.events.filter((e) => e.sourceKey === s.key).length;
+      const count = this.state.events.filter(
+        (e) => e.sourceKey === s.key && e.sourceDate >= minDate && e.sourceDate <= maxDate
+      ).length;
       return { ...s, eventsCount: count };
     });
   }
@@ -243,6 +253,12 @@ class DatabaseService {
     newItems: Omit<NormalizedEvent, 'id' | 'sourceId'>[],
     isFixture = false
   ): { added: number; updated: number; total: number } {
+    const { minDate, maxDate } = getDateWindow();
+    // Only accept events taking place from today until 2 weeks ahead (no past events)
+    const validItems = newItems.filter(
+      (item) => item.sourceDate >= minDate && item.sourceDate <= maxDate
+    );
+
     const source = this.state.sources.find((s) => s.key === sourceKey);
     const sourceId = source ? source.id : `src-${sourceKey}`;
     const now = new Date().toISOString();
@@ -251,7 +267,7 @@ class DatabaseService {
     let updated = 0;
     const seenKeys = new Set<string>();
 
-    for (const item of newItems) {
+    for (const item of validItems) {
       seenKeys.add(item.sourceEventKey);
       const existing = this.state.events.find(
         (e) => e.sourceKey === sourceKey && e.sourceEventKey === item.sourceEventKey
@@ -318,6 +334,8 @@ class DatabaseService {
       }
     }
 
+    // Prune any events that might now be outside the 14-day window
+    this.pruneExpiredEvents();
     this.saveState();
     return { added, updated, total: this.state.events.length };
   }
@@ -336,13 +354,19 @@ class DatabaseService {
   }
 
   public getEvents(): NormalizedEvent[] {
-    // Sort by manual priority, then date
-    return [...this.state.events].sort((a, b) => {
-      if (a.manualPriority !== b.manualPriority) {
-        return a.manualPriority - b.manualPriority;
-      }
-      return a.sourceDate.localeCompare(b.sourceDate);
-    });
+    const { minDate, maxDate } = getDateWindow();
+    // Return only events taking place today until 2 weeks ahead, default sorted chronologically by date & time
+    return this.state.events
+      .filter((e) => e.sourceDate >= minDate && e.sourceDate <= maxDate)
+      .sort((a, b) => {
+        const dateComp = a.sourceDate.localeCompare(b.sourceDate);
+        if (dateComp !== 0) return dateComp;
+        const timeA = a.sourceTime || '99:99';
+        const timeB = b.sourceTime || '99:99';
+        const timeComp = timeA.localeCompare(timeB);
+        if (timeComp !== 0) return timeComp;
+        return a.id.localeCompare(b.id);
+      });
   }
 
   public getEventById(id: string): NormalizedEvent | undefined {

@@ -39,7 +39,7 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
   onUpdateSourceUrl,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'candidate' | 'approved' | 'rejected'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'approved'>('all');
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [selectedRelevances, setSelectedRelevances] = useState<number[]>([1, 2, 3, 4, 5]);
   const [isRelevanceDropdownOpen, setIsRelevanceDropdownOpen] = useState(false);
@@ -69,16 +69,14 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
   const selectAllRelevances = () => setSelectedRelevances([1, 2, 3, 4, 5]);
   const clearAllRelevances = () => setSelectedRelevances([]);
 
-  // Default sorting: First status, then date, then time
-  const [sortField, setSortField] = useState<SortField>('status');
+  // Default sorting: Date (chronological from today forward) - records do not jump when approved
+  const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   // Filter logic
   const filteredEvents = events.filter((ev) => {
-    if (statusFilter === 'new' && !ev.isNew) return false;
-    if (statusFilter === 'candidate' && ev.editorialState !== 'candidate') return false;
+    if (statusFilter === 'new' && ev.editorialState !== 'candidate' && !ev.isNew) return false;
     if (statusFilter === 'approved' && ev.editorialState !== 'approved') return false;
-    if (statusFilter === 'rejected' && ev.editorialState !== 'rejected') return false;
 
     if (sourceFilter !== 'all' && ev.sourceKey !== sourceFilter) return false;
 
@@ -121,9 +119,11 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
     if (dateComp !== 0) {
       return dateAsc ? dateComp : -dateComp;
     }
-    const timeA = a.sourceTime || '99:99';
+    const timeComp = a.sourceTime || '99:99';
     const timeB = b.sourceTime || '99:99';
-    return dateAsc ? timeA.localeCompare(timeB) : -timeA.localeCompare(timeB);
+    const diffTime = dateAsc ? timeComp.localeCompare(timeB) : -timeComp.localeCompare(timeB);
+    if (diffTime !== 0) return diffTime;
+    return a.id.localeCompare(b.id);
   };
 
   // Sort logic with mandatory secondary date/time tie-breaking
@@ -299,7 +299,7 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#182B33] tracking-tight">
-            Prüfwarteschlange für Information Specialists
+            Information Specialist
           </h1>
           <p className="text-xs sm:text-sm text-[#5A6D75] mt-1">
             Öffentliche Ereignisse sichten, Relevanz bewerten, priorisieren und für die
@@ -311,10 +311,10 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
             {sortedEvents.length} von {events.length} Ereignissen
           </div>
           <div className="text-[11px] font-medium text-[#1F6075]">
-            {sortField === 'status' && 'Sortiert: Status → Datum → Uhrzeit'}
-            {sortField === 'date' && `Sortiert: Datum (${sortDirection === 'asc' ? 'aufst.' : 'abst.'}) → Uhrzeit`}
-            {sortField === 'relevance' && `Sortiert: Relevanz (${sortDirection === 'desc' ? 'höchste zuerst' : 'niedrigste zuerst'}) → Datum → Uhrzeit`}
-            {sortField === 'source' && `Sortiert: Quelle (${sortDirection === 'asc' ? 'A-Z' : 'Z-A'}) → Datum → Uhrzeit`}
+            {sortField === 'status' && 'Sortiert: Status → Datum'}
+            {sortField === 'date' && `Sortiert: Datum (${sortDirection === 'asc' ? 'aufst.' : 'abst.'})`}
+            {sortField === 'relevance' && `Sortiert: Relevanz (${sortDirection === 'desc' ? 'höchste zuerst' : 'niedrigste zuerst'}) → Datum`}
+            {sortField === 'source' && `Sortiert: Quelle (${sortDirection === 'asc' ? 'A-Z' : 'Z-A'}) → Datum`}
             {sortField === 'manual' && 'Manuelle Reihung aktiv'}
           </div>
         </div>
@@ -344,19 +344,9 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                   ? 'bg-[#A85214] text-white font-semibold'
                   : 'text-[#5A6D75] hover:text-[#182B33]'
               }`}
+              title="Alle neuen bzw. noch offenen Ereignisse"
             >
-              Nur Neu ({events.filter((e) => e.isNew).length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter('candidate')}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                statusFilter === 'candidate'
-                  ? 'bg-[#1F6075] text-white font-semibold'
-                  : 'text-[#5A6D75] hover:text-[#182B33]'
-              }`}
-            >
-              Offen ({events.filter((e) => e.editorialState === 'candidate').length})
+              Neu ({events.filter((e) => e.editorialState === 'candidate' || e.isNew).length})
             </button>
             <button
               type="button"
@@ -384,8 +374,6 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
               <option value="bverwg">Bundesverwaltungsgericht</option>
               <option value="bundespraesident">Bundespräsident</option>
               <option value="un_women_news">UN Women News</option>
-              <option value="un_women_publications">UN Women Publikationen</option>
-              <option value="bverfg">Bundesverfassungsgericht</option>
             </select>
           </div>
 
@@ -501,10 +489,10 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                 className={`px-3 py-1.5 w-32 cursor-pointer hover:text-[#182B33] transition-colors ${
                   sortField === 'date' ? 'text-[#1F6075] font-bold' : ''
                 }`}
-                title="Nach Datum und Uhrzeit sortieren"
+                title="Nach Datum sortieren"
               >
                 <div className="flex items-center gap-1">
-                  <span>Datum & Zeit</span>
+                  <span>Datum</span>
                   {sortField === 'date' ? (
                     sortDirection === 'asc' ? <ArrowUp className="w-3 h-3 text-[#1F6075]" /> : <ArrowDown className="w-3 h-3 text-[#1F6075]" />
                   ) : (
@@ -604,9 +592,11 @@ export const SpecialistQueue: React.FC<SpecialistQueueProps> = ({
                       <div className="font-semibold text-[#182B33] text-xs whitespace-nowrap">
                         {formatDate(event.sourceDate)}
                       </div>
-                      <div className="text-[11px] font-mono text-[#5A6D75] mt-0.5 whitespace-nowrap">
-                        {event.sourceTime ? `${event.sourceTime} Uhr` : '—'}
-                      </div>
+                      {event.sourceTime && event.sourceTime.trim() !== '' && event.sourceTime !== '—' && event.sourceTime !== '-' && (
+                        <div className="text-[11px] font-mono text-[#5A6D75] mt-0.5 whitespace-nowrap">
+                          {event.sourceTime} Uhr
+                        </div>
+                      )}
                     </td>
 
                     {/* Title & Details */}

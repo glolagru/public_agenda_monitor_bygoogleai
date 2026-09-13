@@ -20,10 +20,6 @@ export function getSourcePublicWebUrl(sourceKey: SourceKey): string {
       return 'https://www.bundespraesident.de/DE/termine/termine-node.html';
     case 'un_women_news':
       return 'https://www.unwomen.org/en/news-stories';
-    case 'un_women_publications':
-      return 'https://www.unwomen.org/en/digital-library/publications';
-    case 'bverfg':
-      return 'https://www.bundesverfassungsgericht.de/DE/Aktuelles/TermineWochenausblick/termine-Wochenausblick_node.html';
     default:
       return 'https://www.bverwg.de';
   }
@@ -75,16 +71,6 @@ export function getEventSearchHelpers(event: NormalizedEvent): SourceLinkMeta {
       sourceDomain = 'unwomen.org';
       sourceSearchUrl = `https://www.unwomen.org/en/search?text=${encodeURIComponent(query)}`;
       searchLabel = 'UN Women News-Suche';
-      break;
-    case 'un_women_publications':
-      sourceDomain = 'unwomen.org';
-      sourceSearchUrl = `https://www.unwomen.org/en/search?text=${encodeURIComponent(query)}`;
-      searchLabel = 'UN Women Publikationssuche';
-      break;
-    case 'bverfg':
-      sourceDomain = 'bundesverfassungsgericht.de';
-      sourceSearchUrl = `https://www.bundesverfassungsgericht.de/SiteGlobals/Forms/Suche/Entscheidungssuche_Formular.html?templateQueryString=${encodeURIComponent(query)}`;
-      searchLabel = 'BVerfG Entscheidungssuche';
       break;
   }
 

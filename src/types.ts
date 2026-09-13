@@ -12,9 +12,7 @@ export type EditorialState = 'candidate' | 'approved' | 'rejected';
 export type SourceKey =
   | 'bverwg'
   | 'bundespraesident'
-  | 'un_women_news'
-  | 'un_women_publications'
-  | 'bverfg';
+  | 'un_women_news';
 
 export interface SourceDefinition {
   id: string;

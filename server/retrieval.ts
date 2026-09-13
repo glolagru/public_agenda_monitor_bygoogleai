@@ -1,7 +1,6 @@
 import { fetchBverwgEvents } from '../src/adapters/bverwg';
 import { fetchBundespraesidentEvents } from '../src/adapters/bundespraesident';
 import { fetchUnWomenEvents } from '../src/adapters/un_women';
-import { fetchBverfgEvents } from '../src/adapters/bverfg';
 import { SourceKey } from '../src/types';
 import { db } from './db';
 
@@ -41,12 +40,6 @@ export async function retrieveSource(
         break;
       case 'un_women_news':
         result = await fetchUnWomenEvents('news', forceFixture);
-        break;
-      case 'un_women_publications':
-        result = await fetchUnWomenEvents('publications', forceFixture);
-        break;
-      case 'bverfg':
-        result = await fetchBverfgEvents(forceFixture);
         break;
       default:
         throw new Error(`Unbekannter Quellenschlüssel: ${sourceKey}`);
@@ -99,8 +92,6 @@ export async function retrieveAllSources(forceFixture = false) {
     'bverwg',
     'bundespraesident',
     'un_women_news',
-    'un_women_publications',
-    'bverfg',
   ];
 
   const results = [];
